@@ -1,0 +1,2248 @@
+<!DOCTYPE html>
+<html lang="es" class="light" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sendu - Compartir Archivos</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg">
+    <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
+    <link rel="shortcut icon" href="/assets/icons/favicon.ico">
+    <link rel="mask-icon" href="/assets/icons/favicon.svg" color="#dc2626">
+    <link rel="stylesheet" href="/dist/tailwind.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --app-background: radial-gradient(circle at 15% 15%, rgba(244, 63, 94, 0.28), transparent 45%),
+                               radial-gradient(circle at 85% 20%, rgba(59, 130, 246, 0.25), transparent 55%),
+                               radial-gradient(circle at 12% 85%, rgba(167, 139, 250, 0.18), transparent 55%),
+                               linear-gradient(145deg, #050b14 0%, #101b34 100%);
+            --text-color: #f8fafc;
+            --muted-color: rgba(203, 213, 225, 0.78);
+            --card-bg: rgba(15, 23, 42, 0.68);
+            --card-border: rgba(148, 163, 184, 0.28);
+            --accent: #dc2626;
+            --accent-strong: #ef4444;
+            --shadow-soft: 0 28px 60px -32px rgba(8, 15, 35, 0.75);
+        }
+
+        html[data-theme="light"] {
+            --app-background: radial-gradient(circle at 15% 15%, rgba(244, 63, 94, 0.18), transparent 45%),
+                               radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.18), transparent 55%),
+                               linear-gradient(145deg, #f3f4f6 0%, #e7ecf4 100%);
+            --text-color: #0f172a;
+            --muted-color: rgba(71, 85, 105, 0.78);
+            --card-bg: rgba(255, 255, 255, 0.82);
+            --card-border: rgba(148, 163, 184, 0.35);
+            --shadow-soft: 0 22px 50px -28px rgba(15, 23, 42, 0.22);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--app-background);
+            color: var(--text-color);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .text-muted {
+            color: var(--muted-color);
+        }
+
+        .gradient-background {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .gradient-background::before,
+        .gradient-background::after {
+            content: '';
+            position: absolute;
+            inset: -35%;
+            border-radius: 50%;
+            opacity: 0.6;
+            filter: blur(140px);
+        }
+
+        .gradient-background::before {
+            background: rgba(244, 63, 94, 0.55);
+            animation: gradientPulse 14s ease-in-out infinite;
+        }
+
+        .gradient-background::after {
+            background: conic-gradient(from 0deg, rgba(59, 130, 246, 0.5), transparent 55%, rgba(250, 204, 21, 0.4));
+            mix-blend-mode: screen;
+            animation: gradientRotate 22s linear infinite;
+        }
+
+        @keyframes gradientPulse {
+            0%, 100% { transform: scale(1); opacity: 0.55; }
+            50% { transform: scale(1.15); opacity: 0.85; }
+        }
+
+        @keyframes gradientRotate {
+            0% { transform: rotate(0deg) scale(1); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        .glass-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-radius: 999px;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-radius: 1.5rem;
+            box-shadow: var(--shadow-soft);
+            padding: 2rem;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            font-size: 0.8rem;
+            color: inherit;
+        }
+
+        .icon {
+            width: 1.1rem;
+            height: 1.1rem;
+            stroke-width: 1.75px;
+        }
+        .app-nav {
+            position: fixed;
+            top: 1.5rem;
+            left: 0;
+            right: 0;
+            margin: 0 auto;
+            max-width: 1100px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.8rem 1.75rem;
+            z-index: 50;
+        }
+
+        .icon-button,
+        .avatar-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            border-radius: 999px;
+            border: 1px solid var(--card-border);
+            background: rgba(255, 255, 255, 0.08);
+            color: inherit;
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .icon-button:hover,
+        .avatar-button:hover {
+            transform: translateY(-1px);
+            border-color: rgba(255, 255, 255, 0.35);
+            box-shadow: 0 12px 26px -18px rgba(15, 23, 42, 0.6);
+        }
+
+        .user-menu {
+            position: relative;
+        }
+
+        .user-dropdown {
+            position: absolute;
+            top: calc(100% + 0.75rem);
+            right: 0;
+            min-width: 200px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 1.25rem;
+            padding: 0.6rem;
+            box-shadow: var(--shadow-soft);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            z-index: 40;
+        }
+
+        .user-dropdown.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .user-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.55rem 0.65rem;
+            border-radius: 999px;
+            transition: background 0.2s ease, transform 0.2s ease;
+            color: inherit;
+            font-size: 0.9rem;
+        }
+
+        .user-dropdown-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateX(4px);
+        }
+
+        .notification {
+            position: fixed;
+            top: 1.5rem;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            padding: 0 1.5rem;
+            pointer-events: none;
+            z-index: 60;
+        }
+
+        .notification-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 1.25rem;
+            padding: 0.85rem 1.4rem;
+            box-shadow: var(--shadow-soft);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            text-align: center;
+            pointer-events: auto;
+        }
+
+        .app-main {
+            min-height: 100vh;
+            padding: 140px 1.5rem 80px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .app-main > section {
+            width: min(1100px, 100%);
+        }
+
+        .primary-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            color: #ffffff;
+            padding: 0.75rem 1.6rem;
+            border-radius: 999px;
+            font-weight: 600;
+            border: none;
+            box-shadow: 0 18px 32px -22px rgba(220, 38, 38, 0.55);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+        }
+
+        .primary-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 22px 48px -22px rgba(220, 38, 38, 0.65);
+        }
+
+        .secondary-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 999px;
+            border: 1px solid var(--card-border);
+            background: rgba(255, 255, 255, 0.08);
+            font-weight: 600;
+            color: inherit;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .secondary-btn:hover {
+            transform: translateY(-1px);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .link-button {
+            background: none;
+            border: none;
+            color: var(--accent);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .link-button:hover {
+            text-decoration: underline;
+        }
+
+        .form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+
+        .form-label {
+            font-size: 0.9rem;
+            color: var(--muted-color);
+        }
+
+        .form-control {
+            padding: 0.75rem 0.85rem;
+            border-radius: 1rem;
+            border: 1px solid var(--card-border);
+            background: rgba(255, 255, 255, 0.08);
+            color: inherit;
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .form-control:focus {
+            border-color: rgba(220, 38, 38, 0.5);
+            box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.25);
+        }
+
+        html[data-theme="light"] .form-control {
+            background: rgba(255, 255, 255, 0.85);
+        }
+
+        .upload-layout {
+            display: grid;
+            gap: 2rem;
+        }
+
+        @media (min-width: 1024px) {
+            .upload-layout {
+                grid-template-columns: 1.6fr 1fr;
+            }
+        }
+
+        #drop-zone {
+            position: relative;
+            border: 2px dashed rgba(255, 255, 255, 0.35);
+            border-radius: 22px;
+            padding: clamp(2.4rem, 5vw, 3.5rem);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            background: rgba(15, 23, 42, 0.4);
+            transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+        }
+
+        #drop-zone:hover {
+            transform: translateY(-4px);
+            border-color: rgba(220, 38, 38, 0.55);
+            background: rgba(15, 23, 42, 0.5);
+        }
+
+        html[data-theme="light"] #drop-zone {
+            background: rgba(255, 255, 255, 0.75);
+            border-color: rgba(220, 38, 38, 0.35);
+        }
+
+        #drop-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        #drop-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            border-radius: inherit;
+            background: linear-gradient(135deg, rgba(220, 38, 38, 0.55), rgba(59, 130, 246, 0.55));
+            color: #ffffff;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+        }
+
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .upload-options {
+            border-radius: 1.25rem;
+            border: 1px dashed var(--card-border);
+            background: rgba(255, 255, 255, 0.04);
+            padding: 1.35rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .option-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .option-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        .success-card {
+            border-radius: 1.25rem;
+            border: 1px solid rgba(34, 197, 94, 0.4);
+            background: rgba(34, 197, 94, 0.14);
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        html[data-theme="light"] .success-card {
+            background: rgba(187, 247, 208, 0.65);
+        }
+
+        .success-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .info-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            border-radius: 1rem;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .progress-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .progress-card {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 1.25rem;
+            padding: 1rem 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        progress {
+            width: 100%;
+            height: 10px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+        }
+
+        progress::-webkit-progress-bar {
+            background: transparent;
+        }
+
+        progress::-webkit-progress-value {
+            background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+        }
+
+        progress::-moz-progress-bar {
+            background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+        }
+
+        .result-link {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .copy-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.7rem 1.3rem;
+            border-radius: 999px;
+            border: none;
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            color: #ffffff;
+            font-weight: 600;
+            box-shadow: 0 18px 34px -22px rgba(220, 38, 38, 0.6);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .copy-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 22px 42px -22px rgba(220, 38, 38, 0.68);
+        }
+
+        .file-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .file-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.9rem 1.2rem;
+            border-radius: 1rem;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .file-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 0;
+        }
+
+        .file-name {
+            font-weight: 600;
+            word-break: break-word;
+        }
+
+        .file-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 1rem;
+            border-radius: 1rem;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--muted-color);
+        }
+
+        .stats-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(3, 7, 18, 0.62);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            z-index: 80;
+        }
+
+        .modal-card {
+            width: min(420px, 100%);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .wide-input {
+            min-width: 220px;
+        }
+
+        @media (max-width: 768px) {
+            .app-main {
+                padding: 120px 1rem 70px;
+            }
+
+            .glass-card {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="gradient-background" aria-hidden="true"></div>
+
+    <div id="global-notification" class="notification hidden">
+        <div id="global-notification-content" class="notification-card"></div>
+    </div>
+
+    <nav class="app-nav glass-panel">
+        <a id="home-link" href="/" class="flex items-center gap-3 font-semibold tracking-tight text-lg">
+            <span class="flex items-center justify-center w-10 h-10 rounded-full text-white" style="background: rgba(220, 38, 38, 0.82);">S</span>
+            <span class="hidden sm:inline">Sendu</span>
+        </a>
+        <div class="flex items-center gap-3">
+            <button type="button" id="themeToggle" aria-label="Cambiar tema" class="icon-button">
+                <i data-lucide="sun" class="icon"></i>
+            </button>
+            <div class="user-menu">
+                <button type="button" id="user-menu-btn" class="avatar-button" aria-haspopup="true" aria-expanded="false">
+                    <i data-lucide="user" class="icon"></i>
+                </button>
+                <div id="user-dropdown" class="user-dropdown"></div>
+            </div>
+        </div>
+    </nav>
+
+    <main id="app-container" class="app-main"></main>
+    <template id="upload-view-template">
+        <section class="space-y-10">
+            <div class="text-center space-y-3">
+                <span class="badge justify-center mx-auto">
+                    <i data-lucide="sparkles" class="icon"></i>
+                    Transferencias seguras
+                </span>
+                <h1 class="text-3xl md:text-4xl font-semibold">Comparte archivos en segundos</h1>
+                <p class="text-muted max-w-2xl mx-auto">Sube archivos grandes, añade una contraseña opcional y comparte un enlace listo para usar.</p>
+            </div>
+
+            <div class="upload-layout">
+                <form id="upload-form" class="glass-card space-y-8">
+                    <label for="file-input" id="drop-zone">
+                        <i data-lucide="upload-cloud" class="icon" style="width: 2.5rem; height: 2.5rem;"></i>
+                        <span id="drop-main-text" class="text-lg font-semibold">Arrastra tu archivo aquí</span>
+                        <span id="drop-sub-text" class="text-muted">o haz clic para seleccionar</span>
+                        <span class="badge">Tamaño máximo 10GB</span>
+                        <input type="file" id="file-input" class="file-input">
+                        <div id="drop-overlay">
+                            <i data-lucide="download" class="icon" style="width: 2rem; height: 2rem;"></i>
+                            <div>Suelta el archivo para subir</div>
+                        </div>
+                    </label>
+
+                    <div class="button-row">
+                        <button type="button" id="start-upload" class="primary-btn">
+                            <i data-lucide="send" class="icon"></i>
+                            Iniciar subida
+                        </button>
+                        <button type="button" id="clear-selection" class="secondary-btn opacity-50 pointer-events-none" disabled>
+                            <i data-lucide="rotate-ccw" class="icon"></i>
+                            Limpiar selección
+                        </button>
+                    </div>
+
+                    <div id="upload-options" class="upload-options hidden">
+                        <h3 class="font-semibold">Opciones avanzadas</h3>
+                        <div class="option-grid">
+                            <label class="form-field">
+                                <span class="form-label">Contraseña (opcional)</span>
+                                <input type="password" id="password" class="form-control" placeholder="Dejar vacío para sin contraseña" autocomplete="new-password">
+                            </label>
+                            <label class="form-field">
+                                <span class="form-label">Expiración (días)</span>
+                                <input type="number" id="expires" class="form-control" placeholder="0 = Sin expiración" min="0" max="15" inputmode="numeric">
+                            </label>
+                            <label class="form-field">
+                                <span class="form-label">Descargas máximas</span>
+                                <input type="number" id="maxDownloads" class="form-control" placeholder="Vacío = ilimitado" min="1">
+                                <span class="text-muted text-sm">Define cuántas descargas se permiten antes de que el enlace caduque.</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="upload-success-banner" class="success-card hidden">
+                        <div>
+                            <h3 class="font-semibold text-lg">Archivo listo para compartir</h3>
+                            <p class="text-muted text-sm">Copia el enlace generado y compártelo con quien quieras.</p>
+                        </div>
+                        <div class="success-grid">
+                            <input type="text" id="upload-success-url" readonly class="form-control flex-1 wide-input" name="download-url">
+                            <button type="button" id="upload-success-copy" class="copy-button">
+                                <i data-lucide="copy" class="icon"></i>
+                                Copiar enlace
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="upload-list" class="progress-list"></div>
+                </form>
+
+                <aside class="glass-card space-y-6">
+                    <h3 class="text-xl font-semibold">Consejos rápidos</h3>
+                    <ul class="info-list">
+                        <li class="info-item">
+                            <i data-lucide="shield-check" class="icon"></i>
+                            Protege tus enlaces con contraseña para mayor seguridad.
+                        </li>
+                        <li class="info-item">
+                            <i data-lucide="clock" class="icon"></i>
+                            Define una expiración para controlar el acceso temporal.
+                        </li>
+                        <li class="info-item">
+                            <i data-lucide="sparkles" class="icon"></i>
+                            Gestiona tus archivos desde el panel en cualquier momento.
+                        </li>
+                    </ul>
+                </aside>
+            </div>
+        </section>
+    </template>
+
+    <template id="download-view-template">
+        <section class="space-y-8">
+            <div class="glass-card space-y-6 text-center max-w-2xl mx-auto">
+                <div class="space-y-3">
+                    <span class="badge justify-center mx-auto">
+                        <i data-lucide="download" class="icon"></i>
+                        Descarga disponible
+                    </span>
+                    <h2 class="text-3xl font-semibold">Tu archivo está preparado</h2>
+                    <p class="text-muted">Introduce la contraseña si es necesaria y descárgalo al instante.</p>
+                </div>
+
+                <div class="glass-card space-y-2">
+                    <p id="file-name" class="file-name text-lg">nombre_archivo.zip</p>
+                    <p id="file-size" class="text-muted text-sm">0 MB</p>
+                </div>
+
+                <form id="download-form" class="space-y-4 max-w-md mx-auto text-left">
+                    <div id="password-group" class="form-field hidden">
+                        <span class="form-label">Contraseña</span>
+                        <input type="password" id="download-password" class="form-control" placeholder="••••••••">
+                    </div>
+                    <button type="submit" id="download-button" class="primary-btn w-full justify-center">
+                        <i data-lucide="arrow-down-circle" class="icon"></i>
+                        Descargar archivo
+                    </button>
+                </form>
+
+                <p id="expiry-info" class="text-muted text-sm hidden"></p>
+                <div id="download-error-message" class="error-banner hidden"></div>
+            </div>
+        </section>
+    </template>
+    <template id="login-view-template">
+        <section class="space-y-6">
+            <div class="glass-card max-w-md mx-auto space-y-6 text-center">
+                <h2 class="text-3xl font-semibold">Iniciar sesión</h2>
+                <p class="text-muted">Accede a tu panel para gestionar tus archivos y enlaces.</p>
+                <form id="login-form" class="space-y-4 text-left">
+                    <label class="form-field">
+                        <span class="form-label">Email o usuario</span>
+                        <input type="text" id="login-email-username" class="form-control" placeholder="nombre@ejemplo.com" autocomplete="username" required>
+                    </label>
+                    <label class="form-field">
+                        <span class="form-label">Contraseña</span>
+                        <input type="password" id="login-password" class="form-control" placeholder="Tu contraseña" autocomplete="current-password" required>
+                    </label>
+                    <div id="login-error" class="error-banner hidden"></div>
+                    <button type="submit" class="primary-btn w-full justify-center">Iniciar sesión</button>
+                </form>
+                <p class="text-muted text-sm">¿No tienes cuenta? <button type="button" id="goto-register" class="link-button">Crear una ahora</button></p>
+            </div>
+        </section>
+    </template>
+
+    <template id="register-view-template">
+        <section class="space-y-6">
+            <div class="glass-card max-w-md mx-auto space-y-6 text-center">
+                <h2 class="text-3xl font-semibold">Crear cuenta</h2>
+                <p class="text-muted">Controla tus envíos, obtén estadísticas y gestiona tus enlaces.</p>
+                <form id="register-form" class="space-y-4 text-left">
+                    <label class="form-field">
+                        <span class="form-label">Email</span>
+                        <input type="email" id="register-email" class="form-control" placeholder="nombre@ejemplo.com" autocomplete="email" required>
+                    </label>
+                    <label class="form-field">
+                        <span class="form-label">Usuario</span>
+                        <input type="text" id="register-username" class="form-control" placeholder="Tu usuario" autocomplete="username" required>
+                    </label>
+                    <label class="form-field">
+                        <span class="form-label">Contraseña</span>
+                        <input type="password" id="register-password" class="form-control" placeholder="Mínimo 8 caracteres" autocomplete="new-password" required>
+                    </label>
+                    <div id="register-error" class="error-banner hidden"></div>
+                    <button type="submit" class="primary-btn w-full justify-center">Crear cuenta</button>
+                </form>
+                <p class="text-muted text-sm">¿Ya tienes cuenta? <button type="button" id="goto-login" class="link-button">Inicia sesión</button></p>
+            </div>
+        </section>
+    </template>
+
+    <template id="dashboard-view-template">
+        <section class="space-y-8">
+            <header class="flex flex-wrap items-center justify-between gap-4">
+                <div class="space-y-2">
+                    <span class="badge">
+                        <i data-lucide="layout-dashboard" class="icon"></i>
+                        Panel de control
+                    </span>
+                    <h2 class="text-3xl font-semibold">Hola, <span id="dashboard-username"></span></h2>
+                </div>
+                <div class="button-row">
+                    <button type="button" id="goto-upload-from-dashboard" class="primary-btn">
+                        <i data-lucide="plus" class="icon"></i>
+                        Nuevo envío
+                    </button>
+                    <button type="button" id="open-settings-btn" class="secondary-btn">
+                        <i data-lucide="settings" class="icon"></i>
+                        Preferencias
+                    </button>
+                </div>
+            </header>
+
+            <div class="stats-grid">
+                <div class="glass-card text-center space-y-1">
+                    <span class="text-muted text-sm uppercase tracking-wide">Archivos subidos</span>
+                    <span id="dashboard-file-count" class="text-3xl font-semibold">-</span>
+                </div>
+                <div class="glass-card text-center space-y-1">
+                    <span class="text-muted text-sm uppercase tracking-wide">Descargas totales</span>
+                    <span id="dashboard-total-downloads" class="text-3xl font-semibold">-</span>
+                </div>
+                <div class="glass-card text-center space-y-1">
+                    <span class="text-muted text-sm uppercase tracking-wide">Último archivo</span>
+                    <span id="dashboard-latest-file" class="text-lg font-semibold">Sin datos</span>
+                </div>
+            </div>
+
+            <div class="glass-card file-panel">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-semibold">Tus archivos recientes</h3>
+                </div>
+                <div id="user-files-list" class="flex flex-col gap-3">
+                    <p class="empty-state">No has subido ningún archivo aún.</p>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <template id="settings-view-template">
+        <section class="space-y-8">
+            <header class="flex flex-wrap items-center justify-between gap-4">
+                <div class="space-y-2">
+                    <span class="badge">
+                        <i data-lucide="sliders" class="icon"></i>
+                        Ajustes
+                    </span>
+                    <h2 class="text-3xl font-semibold">Personaliza tu experiencia</h2>
+                </div>
+                <button type="button" id="back-to-dashboard" class="secondary-btn">
+                    <i data-lucide="arrow-left" class="icon"></i>
+                    Volver al panel
+                </button>
+            </header>
+
+            <div class="glass-card space-y-4">
+                <h3 class="text-xl font-semibold">Cambiar contraseña</h3>
+                <form id="change-password-form" class="space-y-4">
+                    <label class="form-field">
+                        <span class="form-label">Contraseña actual</span>
+                        <input type="password" id="current-password" class="form-control" placeholder="Ingresa tu contraseña" minlength="8" autocomplete="current-password">
+                    </label>
+                    <label class="form-field">
+                        <span class="form-label">Nueva contraseña</span>
+                        <input type="password" id="new-password" class="form-control" placeholder="Mínimo 8 caracteres" minlength="8" autocomplete="new-password">
+                    </label>
+                    <div id="password-change-message" class="error-banner hidden"></div>
+                    <button type="submit" class="primary-btn">
+                        <i data-lucide="check" class="icon"></i>
+                        Guardar cambios
+                    </button>
+                </form>
+            </div>
+
+            <div class="glass-card space-y-4" style="border: 1px solid rgba(248, 113, 113, 0.35);">
+                <h3 class="text-xl font-semibold" style="color: #fca5a5;">Zona peligrosa</h3>
+                <p class="text-muted text-sm">Eliminar tu cuenta borrará todos los archivos y enlaces asociados.</p>
+                <button type="button" id="delete-account-btn" class="secondary-btn" style="color: #fca5a5;">
+                    <i data-lucide="trash-2" class="icon"></i>
+                    Eliminar mi cuenta
+                </button>
+            </div>
+        </section>
+    </template>
+
+    <template id="delete-account-modal-template">
+        <div class="modal-overlay" id="delete-modal-overlay">
+            <div class="glass-card modal-card">
+                <div class="space-y-2">
+                    <span class="badge" style="background: rgba(248, 113, 113, 0.18); border-color: rgba(248, 113, 113, 0.38);">
+                        <i data-lucide="shield" class="icon"></i>
+                        Confirmación
+                    </span>
+                    <h3 class="text-xl font-semibold">¿Seguro que quieres eliminar tu cuenta?</h3>
+                    <p class="text-muted text-sm">Introduce tu contraseña para confirmar. Esta acción no se puede deshacer.</p>
+                </div>
+                <form id="delete-account-form" class="space-y-4">
+                    <label class="form-field">
+                        <span class="form-label">Contraseña</span>
+                        <input type="password" id="delete-password" class="form-control" placeholder="Tu contraseña" autocomplete="current-password">
+                    </label>
+                    <div id="delete-error" class="error-banner hidden"></div>
+                    <div class="modal-actions">
+                        <button type="button" id="cancel-delete-btn" class="secondary-btn">Cancelar</button>
+                        <button type="submit" class="primary-btn">
+                            <i data-lucide="trash-2" class="icon"></i>
+                            Eliminar definitivamente
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </template>
+
+    <template id="upload-item-template">
+        <div class="progress-card" role="progressbar">
+            <div class="flex items-center justify-between gap-3">
+                <span class="file-name flex-1 truncate">archivo.ext</span>
+                <span class="status-text text-muted text-sm">Subiendo...</span>
+            </div>
+            <progress value="0" max="100"></progress>
+            <div class="result-link hidden">
+                <input type="text" readonly name="download-url" class="form-control flex-1 wide-input">
+                <button type="button" class="copy-button copy-link-button">
+                    <i data-lucide="copy" class="icon"></i>
+                    Copiar enlace
+                </button>
+            </div>
+            <div class="error-message hidden text-sm" style="color: #fecaca;"></div>
+        </div>
+    </template>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const appContainer = document.getElementById('app-container');
+            const notificationWrapper = document.getElementById('global-notification');
+            const notificationContent = document.getElementById('global-notification-content');
+            let notificationTimeoutId;
+            const MAX_EXPIRATION_DAYS = 15;
+
+            function showNotification(message, type = 'info', duration = 4000) {
+                if (!notificationWrapper || !notificationContent || !message) return;
+
+                const baseClasses = [
+                    'max-w-lg', 'w-full', 'px-4', 'py-3', 'rounded-lg',
+                    'shadow-lg', 'text-sm', 'font-medium', 'text-white', 'text-center'
+                ];
+                const palette = {
+                    success: 'bg-green-600/90',
+                    error: 'bg-red-600/90',
+                    info: 'bg-slate-800/90'
+                };
+
+                notificationContent.className = `${baseClasses.join(' ')} ${palette[type] || palette.info}`;
+                notificationContent.textContent = message;
+                notificationWrapper.classList.remove('hidden');
+
+                clearTimeout(notificationTimeoutId);
+                if (duration > 0) {
+                    notificationTimeoutId = setTimeout(() => {
+                        notificationWrapper.classList.add('hidden');
+                    }, duration);
+                }
+            }
+
+            const homeLinkEl = document.getElementById('home-link');
+            const runtimeConfig = window.CONFIG || {};
+
+            const stripTrailingSlash = (value) => {
+                if (!value) return value;
+                return value.replace(/\/+$/, '');
+            };
+
+            const isLocalHostname = (hostname) => {
+                if (!hostname) return false;
+                const localPattern = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/;
+                return localPattern.test(hostname) || hostname.endsWith('.local') || hostname.endsWith('.lan');
+            };
+
+            const resolveHomeUrl = () => {
+                const { protocol, hostname, port } = window.location;
+                const defaultOrigin = `${protocol}//${hostname}${port ? `:${port}` : ''}`;
+
+                if (isLocalHostname(hostname)) {
+                    return `${stripTrailingSlash(runtimeConfig.LOCAL_ORIGIN) || defaultOrigin}/`;
+                }
+
+                if (runtimeConfig.PUBLIC_ORIGIN) {
+                    return `${stripTrailingSlash(runtimeConfig.PUBLIC_ORIGIN)}/`;
+                }
+
+                return `${defaultOrigin}/`;
+            };
+
+            if (homeLinkEl) {
+                const homeUrl = resolveHomeUrl();
+                homeLinkEl.setAttribute('href', homeUrl);
+                homeLinkEl.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    window.location.href = homeUrl;
+                });
+            }
+
+            const triggerDownloadFallback = (fileId, password) => {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/api/download/${fileId}`;
+                form.style.display = 'none';
+                
+                if (password) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'password';
+                    input.value = password;
+                    form.appendChild(input);
+                }
+                
+                document.body.appendChild(form);
+                form.submit();
+                setTimeout(() => form.remove(), 2000);
+            };
+
+            // --- Router simple ---
+            const path = window.location.pathname;
+            if (path.startsWith('/share/')) {
+                const fileId = path.split('/')[2];
+                loadDownloadView(fileId);
+            } else {
+                loadUploadView();
+            }
+
+            // --- Cargar Vistas ---
+            function loadUploadView() {
+                const template = document.getElementById('upload-view-template').content.cloneNode(true);
+                appContainer.innerHTML = '';
+                appContainer.appendChild(template);
+                initUploadListeners();
+            }
+
+            function loadDownloadView(fileId) {
+                const template = document.getElementById('download-view-template').content.cloneNode(true);
+                appContainer.innerHTML = '';
+                appContainer.appendChild(template);
+                initDownloadListeners(fileId);
+            }
+
+            // --- Lógica de Subida (Upload) ---
+            function initUploadListeners() {
+                const dropZone = document.getElementById('drop-zone');
+                const fileInput = document.getElementById('file-input');
+                const dropOverlay = document.getElementById('drop-overlay');
+                const uploadForm = document.getElementById('upload-form');
+                const uploadOptions = document.getElementById('upload-options');
+                const startUploadBtn = document.getElementById('start-upload');
+                const clearSelectionBtn = document.getElementById('clear-selection');
+                const expiresInput = document.getElementById('expires');
+                const successBanner = document.getElementById('upload-success-banner');
+                const successUrlInput = document.getElementById('upload-success-url');
+                const successCopyBtn = document.getElementById('upload-success-copy');
+                let selectedFile = null;
+
+                if (!dropZone) return;
+
+                function hideSuccessBanner() {
+                    if (successBanner) {
+                        successBanner.classList.add('hidden');
+                    }
+                    if (successUrlInput) {
+                        successUrlInput.value = '';
+                        successUrlInput.removeAttribute('value');
+                    }
+                    if (successCopyBtn) {
+                        successCopyBtn.innerHTML = '<i data-lucide="copy" class="icon"></i> Copiar enlace';
+                        if (typeof lucide !== 'undefined') {
+                            lucide.createIcons();
+                        }
+                    }
+                }
+
+                hideSuccessBanner();
+
+                if (successCopyBtn && successUrlInput) {
+                    successCopyBtn.addEventListener('click', () => {
+                        const url = successUrlInput.value.trim();
+                        if (!url) {
+                            showNotification('No hay enlace disponible para copiar.', 'info', 2500);
+                            return;
+                        }
+                        if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+                            showNotification('La API del portapapeles no esta disponible.', 'error', 2500);
+                            return;
+                        }
+                        navigator.clipboard.writeText(url).then(() => {
+                            successCopyBtn.innerHTML = '<i data-lucide="check" class="icon"></i> Copiado';
+                            lucide.createIcons();
+                            setTimeout(() => {
+                                successCopyBtn.innerHTML = '<i data-lucide="copy" class="icon"></i> Copiar enlace';
+                                lucide.createIcons();
+                            }, 2000);
+                            showNotification('Enlace copiado al portapapeles.', 'success', 2500);
+                        }).catch(() => {
+                            showNotification('No se pudo copiar el enlace.', 'error', 2500);
+                        });
+                    });
+                }
+
+                if (uploadForm && startUploadBtn) {
+                    uploadForm.addEventListener('submit', (event) => {
+                        event.preventDefault(); // Evitar recarga al presionar Enter
+
+                        if (!selectedFile || startUploadBtn.disabled) {
+                            showNotification('Selecciona un archivo antes de subir.', 'info', 2500);
+                            return;
+                        }
+
+                        startUploadBtn.click();
+                    });
+                }
+
+                if (expiresInput) {
+                    expiresInput.addEventListener('input', () => {
+                        const rawDigits = expiresInput.value.replace(/\D+/g, '');
+                        if (rawDigits === '') {
+                            expiresInput.value = '';
+                            return;
+                        }
+                        let numericValue = parseInt(rawDigits, 10);
+                        if (Number.isNaN(numericValue)) {
+                            expiresInput.value = '';
+                            return;
+                        }
+                        if (numericValue > MAX_EXPIRATION_DAYS) {
+                            numericValue = MAX_EXPIRATION_DAYS;
+                            showNotification(`La expiración máxima es de ${MAX_EXPIRATION_DAYS} días.`, 'info', 2500);
+                        }
+                        expiresInput.value = String(numericValue);
+                    });
+                }
+                if (clearSelectionBtn) {
+                    clearSelectionBtn.disabled = true;
+                    clearSelectionBtn.classList.add("opacity-50", "pointer-events-none");
+                    clearSelectionBtn.addEventListener("click", () => {
+                        resetDropZone();
+                    });
+                }
+
+                // Prevenir comportamientos por defecto
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, preventDefaults, false);
+                    document.body.addEventListener(eventName, preventDefaults, false);
+                });
+
+                // Resaltar al arrastrar
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, () => dropOverlay.style.opacity = '1', false);
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, () => dropOverlay.style.opacity = '0', false);
+                });
+
+                // Manejar archivos soltados
+                dropZone.addEventListener('drop', (e) => {
+                    const dt = e.dataTransfer;
+                    const files = dt.files;
+                    if (files.length) {
+                        fileInput.files = files; // Asignar al input
+                        showUploadOptions(files[0]);
+                    }
+                }, false);
+
+                // Manejar selección de input
+                fileInput.addEventListener('change', () => {
+                    if (fileInput.files.length > 0) {
+                        showUploadOptions(fileInput.files[0]);
+                    }
+                });
+
+                // Mostrar opciones cuando se selecciona un archivo
+                function showUploadOptions(file) {
+                    selectedFile = file;
+                    hideSuccessBanner();
+                    
+                    // Actualizar la zona de drop para mostrar el archivo seleccionado
+                    const dropIcon = dropZone.querySelector('[data-lucide="upload-cloud"], [data-lucide="file-check"]');
+                    const mainText = dropZone.querySelector('#drop-main-text');
+                    const subText = dropZone.querySelector('#drop-sub-text');
+                    
+                    if (dropIcon) {
+                        dropIcon.setAttribute('data-lucide', 'file-check');
+                    }
+                    mainText.textContent = `Archivo seleccionado: ${file.name}`;
+                    subText.textContent = `${formatBytes(file.size)} • Haz clic para cambiar`;
+                    
+                    // Mostrar las opciones
+                    uploadOptions.classList.remove('hidden');
+                    if (clearSelectionBtn) {
+                        clearSelectionBtn.disabled = false;
+                        clearSelectionBtn.classList.remove("opacity-50", "pointer-events-none");
+                    }
+                    
+                    // Refrescar iconos
+                    lucide.createIcons();
+                    
+                    // Scroll suave hacia las opciones
+                    uploadOptions.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+
+                // Botón de iniciar subida
+                startUploadBtn.addEventListener('click', async () => {
+                    if (!selectedFile) return;
+
+                    const originalBtnContent = startUploadBtn.innerHTML;
+                    const mainText = dropZone.querySelector('#drop-main-text');
+                    const subText = dropZone.querySelector('#drop-sub-text');
+                    uploadOptions.classList.add('hidden');
+                    dropZone.classList.add('opacity-60', 'pointer-events-none');
+                    startUploadBtn.disabled = true;
+                    startUploadBtn.innerHTML = '<i data-lucide="loader-2" class="icon animate-spin"></i> Subiendo...';
+                    if (mainText && subText) {
+                        mainText.textContent = `Subiendo: ${selectedFile.name}`;
+                        subText.textContent = 'No cierres esta pestaña hasta finalizar.';
+                    }
+                    lucide.createIcons();
+
+                    const currentFileName = selectedFile ? selectedFile.name : '';
+                    let uploadSuccess = false;
+                    let lastUploadResult = null;
+
+                    try {
+                        const results = await handleFiles([selectedFile]);
+                        if (Array.isArray(results) && results.length > 0) {
+                            lastUploadResult = results[0];
+                        }
+                        uploadSuccess = true;
+                    } catch (err) {
+                        console.error('Error global en subida:', err);
+                    } finally {
+                        if (uploadSuccess && lastUploadResult && lastUploadResult.downloadUrl) {
+                            showNotification('Archivo listo! Encuentra el enlace generado debajo.', 'success', 4000);
+                        }
+                        startUploadBtn.disabled = false;
+                        startUploadBtn.innerHTML = originalBtnContent;
+                        resetDropZone(uploadSuccess ? { state: 'success', fileName: currentFileName, downloadUrl: lastUploadResult?.downloadUrl } : { state: 'default' });
+                    }
+                });
+
+                // Función para resetear la zona de drop
+
+function resetDropZone(options = {}) {
+    const { state = 'default', fileName, downloadUrl } = options;
+    const dropIcon = dropZone.querySelector('[data-lucide="file-check"], [data-lucide="upload-cloud"]');
+    const mainText = dropZone.querySelector('#drop-main-text');
+    const subText = dropZone.querySelector('#drop-sub-text');
+
+    dropZone.classList.remove('opacity-60', 'pointer-events-none');
+    uploadOptions.classList.add('hidden');
+    selectedFile = null;
+    fileInput.value = '';
+
+    if (dropIcon) {
+        dropIcon.setAttribute('data-lucide', 'upload-cloud');
+    }
+
+    if (state === 'success') {
+        if (mainText) {
+            mainText.textContent = 'Archivo subido correctamente';
+        }
+        if (subText) {
+            subText.textContent = downloadUrl
+                ? 'Comparte el enlace generado a continuación.'
+                : 'Copia el enlace generado abajo o selecciona un nuevo archivo.';
+        }
+        if (successBanner && successUrlInput && downloadUrl) {
+            successBanner.classList.remove('hidden');
+            successUrlInput.value = downloadUrl;
+            successUrlInput.setAttribute('value', downloadUrl);
+        } else {
+            hideSuccessBanner();
+        }
+    } else {
+        if (mainText) {
+            mainText.textContent = 'Arrastra tu archivo aquí';
+        }
+        if (subText) {
+            subText.textContent = 'o haz clic para seleccionar';
+        }
+        hideSuccessBanner();
+    }
+    if (clearSelectionBtn) {
+        clearSelectionBtn.disabled = true;
+        clearSelectionBtn.classList.add('opacity-50', 'pointer-events-none');
+    }
+
+    lucide.createIcons();
+}
+
+            }
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            async function handleFiles(files) {
+                return Promise.all([...files].map(file => uploadFile(file)));
+            }
+
+            async function uploadFile(file) {
+                const uploadList = document.getElementById('upload-list');
+                const template = document.getElementById('upload-item-template').content.cloneNode(true);
+                const item = template.querySelector('div[role="progressbar"]');
+                const fileNameEl = item.querySelector('.file-name');
+                const statusTextEl = item.querySelector('.status-text');
+                const progressEl = item.querySelector('progress');
+                const resultLinkEl = item.querySelector('.result-link');
+                const resultInput = item.querySelector('.result-link input');
+                const copyButton = item.querySelector('.copy-button');
+                const errorEl = item.querySelector('.error-message');
+
+                fileNameEl.textContent = file.name;
+                uploadList.prepend(item);
+                
+                // Scroll hacia el elemento de progreso
+                setTimeout(() => {
+                    item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+                
+                // --- CHUNKED UPLOAD (30MB, paralelo) ---
+                const CHUNK_SIZE = 30 * 1024 * 1024; // 30MB
+                const CONCURRENCY = 4;
+
+                const passwordInput = document.getElementById('password');
+                const expiresInput = document.getElementById('expires');
+                const maxDownloadsInput = document.getElementById('maxDownloads');
+
+                const password = passwordInput ? passwordInput.value : '';
+                const expiresInputValue = expiresInput ? expiresInput.value.trim() : '';
+                const maxDownloads = maxDownloadsInput ? maxDownloadsInput.value : '';
+
+                let expiresDays = null;
+                if (expiresInputValue !== '') {
+                    const parsedExpires = parseInt(expiresInputValue, 10);
+                    if (Number.isNaN(parsedExpires)) {
+                        errorEl.textContent = 'La expiración debe ser un número entero.';
+                        errorEl.classList.remove('hidden');
+                        return;
+                    }
+                    expiresDays = Math.max(0, Math.min(parsedExpires, MAX_EXPIRATION_DAYS));
+                }
+
+                const expiresHours = (expiresDays !== null && expiresDays > 0) ? expiresDays * 24 : null;
+
+                try {
+                    console.log('🚀 Iniciando subida de archivo:', file.name, 'Tamaño:', file.size);
+                    statusTextEl.textContent = 'Inicializando... 0%';
+                    progressEl.value = 0;
+                    progressEl.classList.remove('hidden');
+                    // 1) init
+                    const initRes = await fetch('/api/upload/init', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            fileName: file.name,
+                            size: file.size,
+                            mimeType: file.type || 'application/octet-stream',
+                            expires: expiresHours,
+                            maxDownloads: maxDownloads || null,
+                            password: password || null
+                        })
+                    });
+                    const initJson = await initRes.json();
+                    console.log('📋 Init response:', initJson);
+                    if (!initRes.ok) throw new Error(initJson.message || 'No se pudo iniciar la subida.');
+
+                    const uploadId = initJson.uploadId;
+                    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+                    let uploadedBytes = 0;
+                    let completedChunks = 0;
+                    console.log(`📦 Total chunks: ${totalChunks}, Chunk size: ${CHUNK_SIZE / 1024 / 1024}MB`);
+
+                    // 2) subir chunks en paralelo
+                    const uploadChunk = async (i) => {
+                        const start = i * CHUNK_SIZE;
+                        const end = Math.min(start + CHUNK_SIZE, file.size);
+                        const blob = file.slice(start, end);
+                        console.log(`⬆️ Subiendo chunk ${i + 1} de ${totalChunks} (${Math.round((end - start) / 1024 / 1024)}MB)`);
+                        const res = await fetch(`/api/upload/chunk?uploadId=${encodeURIComponent(uploadId)}&index=${i}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/octet-stream' },
+                            body: blob
+                        });
+                        if (!res.ok) {
+                            const err = await res.json().catch(() => ({}));
+                            throw new Error(err.message || `Fallo subiendo chunk ${i}`);
+                        }
+                        uploadedBytes += (end - start);
+                        completedChunks += 1;
+                        const percent = (uploadedBytes / file.size) * 100;
+                        progressEl.value = percent;
+                        statusTextEl.textContent = `${Math.round(percent)}% • Chunk ${completedChunks}/${totalChunks}`;
+                        console.log(`✅ Chunk ${i + 1} completado. Progreso: ${Math.round(percent)}%`);
+                    };
+
+                    let cursor = 0;
+                    const workers = new Array(Math.min(CONCURRENCY, totalChunks)).fill(0).map(async () => {
+                        while (cursor < totalChunks) {
+                            const currentIndex = cursor++;
+                            await uploadChunk(currentIndex);
+                        }
+                    });
+                    await Promise.all(workers);
+
+                    console.log('✨ Todos los chunks subidos, finalizando...');
+                    // 3) complete
+                    statusTextEl.textContent = 'Finalizando...';
+                    const compRes = await fetch('/api/upload/complete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ uploadId })
+                    });
+                    const compJson = await compRes.json();
+                    console.log('🎉 Upload completado:', compJson);
+                    if (!compRes.ok) throw new Error(compJson.message || 'No se pudo finalizar la subida.');
+
+                    statusTextEl.textContent = '100% - Completado!';
+                    statusTextEl.classList.add('text-green-400');
+                    resultLinkEl.classList.remove('hidden');
+                    resultInput.value = compJson.downloadUrl;
+                    resultInput.setAttribute('value', compJson.downloadUrl);
+                    setTimeout(() => {
+                        try {
+                            resultInput.focus({ preventScroll: true });
+                            resultInput.select();
+                        } catch (focusErr) {
+                            console.debug('No se pudo enfocar el campo del enlace:', focusErr);
+                        }
+                    }, 100);
+
+                    copyButton.addEventListener('click', () => {
+                        if (!compJson.downloadUrl) {
+                            showNotification('No hay enlace disponible para copiar.', 'info', 2500);
+                            return;
+                        }
+                        if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+                            showNotification('La API del portapapeles no esta disponible.', 'error', 2500);
+                            return;
+                        }
+                        navigator.clipboard.writeText(compJson.downloadUrl).then(() => {
+                            copyButton.innerHTML = '<i data-lucide="check" class="icon"></i> Copiado';
+                            lucide.createIcons();
+                            setTimeout(() => {
+                                copyButton.innerHTML = '<i data-lucide="copy" class="icon"></i> Copiar enlace';
+                                lucide.createIcons();
+                            }, 2000);
+                            showNotification('Enlace copiado al portapapeles.', 'success', 2500);
+                        }).catch(() => {
+                            showNotification('No se pudo copiar el enlace.', 'error', 2500);
+                        });
+                    });
+
+                    return compJson;
+
+                } catch (err) {
+                    console.error('❌ Error durante la subida:', err);
+                    statusTextEl.textContent = 'Error';
+                    statusTextEl.classList.add('text-red-400');
+                    errorEl.textContent = err.message || 'Error desconocido';
+                    errorEl.classList.remove('hidden');
+                    throw err;
+                } finally {
+                    lucide.createIcons();
+                }
+            }
+
+            // --- Lógica de Descarga (Download) ---
+            async function initDownloadListeners(fileId) {
+                const form = document.getElementById('download-form');
+                const passwordGroup = document.getElementById('password-group');
+                const passwordInput = document.getElementById('download-password');
+                const fileNameEl = document.getElementById('file-name');
+                const fileSizeEl = document.getElementById('file-size');
+                const errorEl = document.getElementById('download-error-message');
+                const expiryEl = document.getElementById('expiry-info');
+                const downloadBtn = document.getElementById('download-button');
+                
+                const clearDownloadError = () => {
+                    if (errorEl) {
+                        errorEl.textContent = '';
+                        errorEl.classList.add('hidden');
+                    }
+                };
+                const renderDownloadError = (message) => {
+                    if (errorEl) {
+                        errorEl.textContent = message;
+                        errorEl.classList.remove('hidden');
+                    }
+                };
+
+                try {
+                    // 1. Obtener metadata
+                    const metaRes = await fetch(`/api/meta/${fileId}`);
+                    if (!metaRes.ok) {
+                        const errData = await metaRes.json().catch(() => ({ message: 'Error al obtener metadatos.' }));
+                        throw new Error(errData.message);
+                    }
+                    const meta = await metaRes.json();
+
+                    clearDownloadError();
+                    
+                    fileNameEl.textContent = meta.fileName;
+                    fileSizeEl.textContent = formatBytes(meta.size);
+
+                    let expiryText = [];
+                    if (meta.expiresAt) {
+                         expiryText.push(`Expira: ${new Date(meta.expiresAt).toLocaleString()}`);
+                    }
+                    if (meta.downloadsLeft) {
+                        expiryText.push(`Descargas restantes: ${meta.downloadsLeft}`);
+                    }
+                    const expiryMessage = expiryText.join(' | ');
+                    expiryEl.textContent = expiryMessage;
+                    if (expiryMessage.length > 0) {
+                        expiryEl.classList.remove('hidden');
+                    } else {
+                        expiryEl.classList.add('hidden');
+                    }
+
+                    // 2. Configurar el manejador de descargas
+                    if (meta.requiresPassword) {
+                        // LÓGICA ANTERIOR PARA ARCHIVOS CON CONTRASEÑA
+                        passwordGroup.classList.remove('hidden');
+                        if (passwordInput) {
+                            passwordInput.required = true;
+                            passwordInput.setAttribute('name', 'password');
+                        }
+                        
+                        form.addEventListener('submit', async (e) => {
+                            e.preventDefault();
+                            clearDownloadError();
+                            downloadBtn.disabled = true;
+                            downloadBtn.innerHTML = '<i data-lucide="loader-2" class="icon animate-spin"></i> Procesando...';
+                            lucide.createIcons();
+                            
+                            try {
+                                const payload = { password: passwordInput.value };
+                                const downloadRes = await fetch(`/api/download/${fileId}`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Accept': 'application/json',
+                                        'X-Download-Check': 'true'
+                                    },
+                                    credentials: 'include',
+                                    body: JSON.stringify(payload)
+                                });
+
+                                const validation = await downloadRes.json();
+                                if (!downloadRes.ok || !validation || !validation.ok) {
+                                    throw new Error(validation?.message || 'No se pudo preparar la descarga.');
+                                }
+
+                                triggerDownloadFallback(fileId, passwordInput.value);
+                                showNotification('Descarga iniciada.', 'success', 2500);
+
+                            } catch (err) {
+                                renderDownloadError(err.message);
+                            } finally {
+                                downloadBtn.disabled = false;
+                                downloadBtn.innerHTML = '<i data-lucide="download" class="icon"></i> Descargar archivo';
+                                lucide.createIcons();
+                            }
+                        });
+                    } else {
+                        // Lógica para archivos sin contraseña (validación y descarga POST)
+                        form.addEventListener('submit', async (e) => {
+                            e.preventDefault();
+                            clearDownloadError();
+                            downloadBtn.disabled = true;
+                            downloadBtn.innerHTML = '<i data-lucide="loader-2" class="icon animate-spin"></i> Procesando...';
+                            lucide.createIcons();
+
+                            if (passwordInput) {
+                                passwordInput.required = false;
+                                passwordInput.removeAttribute('name');
+                            }
+
+                            try {
+                                const downloadRes = await fetch(`/api/download/${fileId}`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Accept': 'application/json',
+                                        'X-Download-Check': 'true'
+                                    },
+                                    credentials: 'include',
+                                    body: JSON.stringify({})
+                                });
+
+                                const validation = await downloadRes.json();
+                                if (!downloadRes.ok || !validation || !validation.ok) {
+                                    throw new Error(validation?.message || 'No se pudo preparar la descarga.');
+                                }
+
+                                triggerDownloadFallback(fileId, null);
+                                showNotification('Descarga iniciada.', 'success', 2500);
+
+                            } catch (err) {
+                                renderDownloadError(err.message);
+                            } finally {
+                                downloadBtn.disabled = false;
+                                downloadBtn.innerHTML = '<i data-lucide="download" class="icon"></i> Descargar archivo';
+                                lucide.createIcons();
+                            }
+                        });
+                    }
+                } catch (err) {
+                    renderDownloadError(err.message);
+                    form.classList.add('hidden');
+                }
+            }
+            
+            
+            function formatBytes(bytes, decimals = 2) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const dm = decimals < 0 ? 0 : decimals;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+            }
+
+            function formatTimeSince(timestamp) {
+                if (!timestamp) return 'poco tiempo';
+                const time = typeof timestamp === 'number' ? timestamp : Number(timestamp);
+                const diffMs = Date.now() - time;
+
+                if (Number.isNaN(diffMs) || diffMs < 0) {
+                    return 'instantes';
+                }
+
+                const seconds = Math.floor(diffMs / 1000);
+                if (seconds < 45) return 'instantes';
+
+                const intervals = [
+                    { label: 'año', seconds: 31536000 },
+                    { label: 'mes', seconds: 2592000 },
+                    { label: 'semana', seconds: 604800 },
+                    { label: 'día', seconds: 86400 },
+                    { label: 'hora', seconds: 3600 },
+                    { label: 'minuto', seconds: 60 }
+                ];
+
+                for (const interval of intervals) {
+                    const count = Math.floor(seconds / interval.seconds);
+                    if (count >= 1) {
+                        return `${count} ${interval.label}${count !== 1 ? 's' : ''}`;
+                    }
+                }
+
+                return 'instantes';
+            }
+
+            // --- SISTEMA DE AUTENTICACIÓN ---
+            let currentUser = null;
+
+            // Verificar sesión al cargar
+            checkAuth();
+
+            async function checkAuth() {
+                try {
+                    const hasSessionCookie = document.cookie.split(';').some((cookie) =>
+                        cookie.trim().startsWith('connect.sid=')
+                    );
+
+                    if (!hasSessionCookie) {
+                        currentUser = null;
+                        updateUserMenu();
+                        return;
+                    }
+
+                    const res = await fetch('/api/auth/me', {
+                        credentials: 'include'
+                    });
+                    
+                    if (res.ok) {
+                        const data = await res.json();
+                        currentUser = data.user;
+                        updateUserMenu();
+                    } else {
+                        currentUser = null;
+                        updateUserMenu();
+                    }
+                } catch (err) {
+                    currentUser = null;
+                    updateUserMenu();
+                }
+            }
+
+            function updateUserMenu() {
+                const dropdown = document.getElementById('user-dropdown');
+                
+                if (currentUser) {
+                    // Usuario autenticado - mostrar perfil y opciones
+                    dropdown.innerHTML = `
+                        <div class="user-info">
+                            <div class="user-info-name">${currentUser.username}</div>
+                            <div class="user-info-email">${currentUser.email}</div>
+                        </div>
+                        <a href="#" class="user-dropdown-item" id="menu-dashboard">
+                            <i data-lucide="layout-dashboard" style="width: 16px; height: 16px;"></i>
+                            <span>Mi Dashboard</span>
+                        </a>
+                        <a href="#" class="user-dropdown-item" id="menu-settings">
+                            <i data-lucide="settings" style="width: 16px; height: 16px;"></i>
+                            <span>Configuración</span>
+                        </a>
+                        <div class="user-dropdown-divider"></div>
+                        <a href="#" class="user-dropdown-item" id="menu-logout">
+                            <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
+                            <span>Cerrar Sesión</span>
+                        </a>
+                    `;
+
+                    // Event listeners
+                    document.getElementById('menu-dashboard').addEventListener('click', (e) => {
+                        e.preventDefault();
+                        closeUserMenu();
+                        loadDashboardView();
+                    });
+
+                    document.getElementById('menu-settings').addEventListener('click', (e) => {
+                        e.preventDefault();
+                        closeUserMenu();
+                        loadSettingsView();
+                    });
+
+                    document.getElementById('menu-logout').addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        closeUserMenu();
+                        try {
+                            await fetch('/api/auth/logout', {
+                                method: 'POST',
+                                credentials: 'include'
+                            });
+                            currentUser = null;
+                            updateUserMenu();
+                            loadUploadView();
+                        } catch (err) {
+                            console.error('Error al cerrar sesión:', err);
+                        }
+                    });
+
+                } else {
+                    // Usuario no autenticado - mostrar opciones de login/registro
+                    dropdown.innerHTML = `
+                        <a href="#" class="user-dropdown-item" id="menu-login">
+                            <i data-lucide="log-in" style="width: 16px; height: 16px;"></i>
+                            <span>Iniciar Sesión</span>
+                        </a>
+                        <a href="#" class="user-dropdown-item" id="menu-register">
+                            <i data-lucide="user-plus" style="width: 16px; height: 16px;"></i>
+                            <span>Registrarse</span>
+                        </a>
+                    `;
+
+                    // Event listeners
+                    document.getElementById('menu-login').addEventListener('click', (e) => {
+                        e.preventDefault();
+                        closeUserMenu();
+                        loadLoginView();
+                    });
+
+                    document.getElementById('menu-register').addEventListener('click', (e) => {
+                        e.preventDefault();
+                        closeUserMenu();
+                        loadRegisterView();
+                    });
+                }
+
+                lucide.createIcons();
+            }
+
+            // Toggle del menú desplegable
+            const userMenuBtn = document.getElementById('user-menu-btn');
+            const userDropdown = document.getElementById('user-dropdown');
+
+            userMenuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userDropdown.classList.toggle('show');
+            });
+
+            // Cerrar menú al hacer click fuera
+            document.addEventListener('click', (e) => {
+                if (!userDropdown.contains(e.target) && e.target !== userMenuBtn) {
+                    userDropdown.classList.remove('show');
+                }
+            });
+
+            function closeUserMenu() {
+                userDropdown.classList.remove('show');
+            }
+
+            // --- Vistas de autenticación ---
+            function loadLoginView() {
+                const template = document.getElementById('login-view-template').content.cloneNode(true);
+                appContainer.innerHTML = '';
+                appContainer.appendChild(template);
+
+                const form = document.getElementById('login-form');
+                const errorEl = document.getElementById('login-error');
+
+                document.getElementById('goto-register').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    loadRegisterView();
+                });
+
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    errorEl.classList.add('hidden');
+
+                    const emailOrUsername = document.getElementById('login-email-username').value;
+                    const password = document.getElementById('login-password').value;
+
+                    try {
+                        const res = await fetch('/api/auth/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ emailOrUsername, password })
+                        });
+
+                        const data = await res.json();
+
+                        if (res.ok) {
+                            currentUser = data.user;
+                            updateUserMenu();
+                            loadDashboardView();
+                        } else {
+                            errorEl.textContent = data.message;
+                            errorEl.classList.remove('hidden');
+                        }
+                    } catch (err) {
+                        errorEl.textContent = 'Error de conexión';
+                        errorEl.classList.remove('hidden');
+                    }
+                });
+
+                lucide.createIcons();
+            }
+
+            function loadRegisterView() {
+                const template = document.getElementById('register-view-template').content.cloneNode(true);
+                appContainer.innerHTML = '';
+                appContainer.appendChild(template);
+
+                const form = document.getElementById('register-form');
+                const errorEl = document.getElementById('register-error');
+
+                document.getElementById('goto-login').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    loadLoginView();
+                });
+
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    errorEl.classList.add('hidden');
+
+                    const email = document.getElementById('register-email').value;
+                    const username = document.getElementById('register-username').value;
+                    const password = document.getElementById('register-password').value;
+
+                    // Validar formato de email en frontend
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(email)) {
+                        errorEl.textContent = 'Por favor ingresa un email válido (ejemplo: correo@dominio.com)';
+                        errorEl.classList.remove('hidden');
+                        return;
+                    }
+
+                    try {
+                        const res = await fetch('/api/auth/register', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ email, username, password })
+                        });
+
+                        const data = await res.json();
+
+                        if (res.ok) {
+                            currentUser = data.user;
+                            updateUserMenu();
+                            loadDashboardView();
+                        } else {
+                            errorEl.textContent = data.message;
+                            errorEl.classList.remove('hidden');
+                        }
+                    } catch (err) {
+                        errorEl.textContent = 'Error de conexión';
+                        errorEl.classList.remove('hidden');
+                    }
+                });
+
+                lucide.createIcons();
+            }
+
+            async function loadDashboardView() {
+                const template = document.getElementById('dashboard-view-template').content.cloneNode(true);
+                appContainer.innerHTML = '';
+                appContainer.appendChild(template);
+
+                document.getElementById('dashboard-username').textContent = currentUser.username;
+
+                document.getElementById('goto-upload-from-dashboard').addEventListener('click', () => {
+                    loadUploadView();
+                });
+
+                document.getElementById('open-settings-btn').addEventListener('click', () => {
+                    loadSettingsView();
+                });
+
+                // Cargar archivos del usuario y estadísticas
+                await loadUserFiles();
+
+                lucide.createIcons();
+            }
+
+            function loadSettingsView() {
+                const template = document.getElementById('settings-view-template').content.cloneNode(true);
+                appContainer.innerHTML = '';
+                appContainer.appendChild(template);
+
+                document.getElementById('back-to-dashboard').addEventListener('click', () => {
+                    loadDashboardView();
+                });
+
+                const passwordForm = document.getElementById('change-password-form');
+                const passwordMessage = document.getElementById('password-change-message');
+
+                passwordForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    passwordMessage.classList.add('hidden');
+
+                    const currentPassword = document.getElementById('current-password').value;
+                    const newPassword = document.getElementById('new-password').value;
+
+                    try {
+                        const res = await fetch('/api/user/change-password', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ currentPassword, newPassword })
+                        });
+
+                        const data = await res.json();
+
+                        passwordMessage.textContent = data.message;
+                        passwordMessage.className = res.ok 
+                            ? 'mt-3 p-3 rounded-lg text-sm bg-green-500/20 border border-green-500 text-green-400'
+                            : 'mt-3 p-3 rounded-lg text-sm bg-red-500/20 border border-red-500 text-red-400';
+                        passwordMessage.classList.remove('hidden');
+
+                        if (res.ok) {
+                            passwordForm.reset();
+                        }
+                    } catch (err) {
+                        passwordMessage.textContent = 'Error de conexión';
+                        passwordMessage.className = 'mt-3 p-3 rounded-lg text-sm bg-red-500/20 border border-red-500 text-red-400';
+                        passwordMessage.classList.remove('hidden');
+                    }
+                });
+
+                document.getElementById('delete-account-btn').addEventListener('click', () => {
+                    showDeleteAccountModal();
+                });
+
+                lucide.createIcons();
+            }
+
+            function showDeleteAccountModal() {
+                const modalTemplate = document.getElementById('delete-account-modal-template').content.cloneNode(true);
+                document.body.appendChild(modalTemplate);
+
+                const overlay = document.getElementById('delete-modal-overlay');
+                const form = document.getElementById('delete-account-form');
+                const errorEl = document.getElementById('delete-error');
+                const cancelBtn = document.getElementById('cancel-delete-btn');
+
+                // Cerrar modal
+                const closeModal = () => {
+                    overlay.remove();
+                };
+
+                cancelBtn.addEventListener('click', closeModal);
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) closeModal();
+                });
+
+                // Enviar formulario
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    errorEl.classList.add('hidden');
+
+                    const password = document.getElementById('delete-password').value;
+
+                    try {
+                        const res = await fetch('/api/user/account', {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ password })
+                        });
+
+                        const data = await res.json();
+
+                        if (res.ok) {
+                            closeModal();
+                            currentUser = null;
+                            updateUserMenu();
+                            showNotification('Tu cuenta ha sido eliminada exitosamente.', 'success');
+                            loadUploadView();
+                        } else {
+                            errorEl.textContent = data.message;
+                            errorEl.classList.remove('hidden');
+                        }
+                    } catch (err) {
+                        errorEl.textContent = 'Error de conexión';
+                        errorEl.classList.remove('hidden');
+                    }
+                });
+
+                lucide.createIcons();
+            }
+
+            async function loadUserFiles() {
+                const filesList = document.getElementById('user-files-list');
+
+                try {
+                    const res = await fetch('/api/user/files', {
+                        credentials: 'include'
+                    });
+
+                    let data = {};
+                    try {
+                        data = await res.json();
+                    } catch (parseErr) {
+                        console.error('Error al parsear respuesta de archivos:', parseErr);
+                        data = {};
+                    }
+
+                    if (!res.ok) {
+                        const serverMessage = data?.message || 'Error cargando archivos';
+                        throw new Error(serverMessage);
+                    }
+
+                    const files = Array.isArray(data.files) ? data.files : [];
+
+                    const countEl = document.getElementById('dashboard-file-count');
+                    const downloadsEl = document.getElementById('dashboard-total-downloads');
+                    const latestEl = document.getElementById('dashboard-latest-file');
+
+                    if (files.length === 0) {
+                        if (countEl) countEl.textContent = '0';
+                        if (downloadsEl) downloadsEl.textContent = '0';
+                        if (latestEl) latestEl.textContent = 'Sin archivos';
+                        filesList.innerHTML = '<p class="text-center text-gray-500 py-8">No has subido ningún archivo aún.</p>';
+                        return;
+                    }
+
+                    const totalDownloads = files.reduce((sum, file) => sum + (file.downloadCount || 0), 0);
+                    if (countEl) countEl.textContent = files.length;
+                    if (downloadsEl) downloadsEl.textContent = totalDownloads;
+                    if (latestEl) {
+                        const latestFile = files[0];
+                        latestEl.textContent = `${latestFile.originalName} • hace ${formatTimeSince(latestFile.createdAt)}`;
+                    }
+
+                    filesList.innerHTML = '';
+
+                    files.forEach(file => {
+                        const fileItem = document.createElement('div');
+                        fileItem.className = 'p-4 bg-white/5 dark:bg-slate-800/30 light:bg-gray-100/50 rounded-lg border border-gray-300 dark:border-slate-700 flex justify-between items-center';
+
+                        const expiryInfo = [];
+                        if (file.expiresAt) {
+                            const expired = file.expiresAt < Date.now();
+                            expiryInfo.push(`<span class="${expired ? 'text-red-400' : 'text-gray-400'}">${expired ? 'Expirado' : 'Expira: ' + new Date(file.expiresAt).toLocaleDateString()}</span>`);
+                        }
+                        if (file.maxDownloads) {
+                            expiryInfo.push(`<span class="text-gray-400">${file.downloadCount}/${file.maxDownloads} descargas</span>`);
+                        }
+
+                        fileItem.innerHTML = `
+                            <div class="flex-1">
+                                <p class="font-medium dark:text-white light:text-gray-800">${file.originalName}</p>
+                                <p class="text-sm text-gray-400">${formatBytes(file.size)} • Subido hace ${formatTimeSince(file.createdAt)}</p>
+                                <p class="text-xs text-red-400 mt-1">Descargas: ${file.downloadCount || 0}</p>
+                                ${expiryInfo.length > 0 ? '<p class="text-xs mt-1 text-gray-400">' + expiryInfo.join(' • ') + '</p>' : ''}
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="copy-link-btn px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors" data-id="${file.id}">
+                                    <i data-lucide="copy" class="icon" style="width:1rem; height:1rem;"></i>
+                                </button>
+                                <button class="delete-file-btn px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors" data-id="${file.id}">
+                                    <i data-lucide="trash-2" class="icon" style="width:1rem; height:1rem;"></i>
+                                </button>
+                            </div>
+                        `;
+
+                        filesList.appendChild(fileItem);
+
+                        // Botón copiar enlace
+                        fileItem.querySelector('.copy-link-btn').addEventListener('click', () => {
+                            const url = `${window.location.origin}/share/${file.id}`;
+                            navigator.clipboard.writeText(url).then(() => {
+                                const btn = fileItem.querySelector('.copy-link-btn');
+                                btn.innerHTML = '<i data-lucide="check" class="icon" style="width:1rem; height:1rem;"></i>';
+                                setTimeout(() => {
+                                    btn.innerHTML = '<i data-lucide="copy" class="icon" style="width:1rem; height:1rem;"></i>';
+                                    lucide.createIcons();
+                                }, 2000);
+                                lucide.createIcons();
+                            });
+                        });
+
+                        // Botón eliminar archivo
+                        fileItem.querySelector('.delete-file-btn').addEventListener('click', async () => {
+                            if (!confirm('¿Estás seguro de eliminar este archivo?')) return;
+
+                            try {
+                                const res = await fetch(`/api/user/files/${file.id}`, {
+                                    method: 'DELETE',
+                                    credentials: 'include'
+                                });
+
+                                if (res.ok) {
+                                    fileItem.remove();
+                                    if (filesList.children.length === 0) {
+                                        filesList.innerHTML = '<p class="text-center text-gray-500 py-8">No has subido ningún archivo aún.</p>';
+                                    }
+                                    showNotification('Archivo eliminado correctamente.', 'success');
+                                } else {
+                                    const data = await res.json();
+                                    showNotification(data?.message || 'No se pudo eliminar el archivo.', 'error');
+                                }
+                            } catch (err) {
+                                showNotification('Error de conexión', 'error');
+                            }
+                        });
+                    });
+
+                    lucide.createIcons();
+
+                } catch (err) {
+                    console.error('Error al cargar archivos del usuario:', err);
+                    const message = err.message && err.message.toLowerCase().includes('autoriz')
+                        ? 'Tu sesión ha expirado. Inicia sesión nuevamente para ver tus archivos.'
+                        : 'Hubo un problema al cargar tus archivos. Por favor, intenta de nuevo.';
+                    filesList.innerHTML = `<p class="text-center text-red-500 py-8">${message}</p>`;
+                    const countEl = document.getElementById('dashboard-file-count');
+                    const downloadsEl = document.getElementById('dashboard-total-downloads');
+                    const latestEl = document.getElementById('dashboard-latest-file');
+                    if (countEl) countEl.textContent = '—';
+                    if (downloadsEl) downloadsEl.textContent = '—';
+                    if (latestEl) latestEl.textContent = 'Sin datos';
+                }
+            }
+            
+            // --- Lógica del Tema (Claro/Oscuro) ---
+            const themeToggle = document.getElementById('themeToggle');
+            
+            function setTheme(isDark) {
+                const htmlEl = document.documentElement;
+                if (isDark) {
+                    htmlEl.classList.remove('light');
+                    htmlEl.classList.add('dark');
+                    htmlEl.setAttribute('data-theme', 'dark');
+                    localStorage.theme = 'dark';
+                } else {
+                    htmlEl.classList.remove('dark');
+                    htmlEl.classList.add('light');
+                    htmlEl.setAttribute('data-theme', 'light');
+                    localStorage.theme = 'light';
+                }
+                lucide.createIcons(); // Refrescar iconos
+            }
+            
+            // Event listener para el toggle
+            themeToggle.addEventListener('click', () => {
+                const isDark = document.documentElement.classList.contains('dark');
+                setTheme(!isDark);
+            });
+
+            // Aplicar tema guardado al cargar
+            if (localStorage.theme === 'dark') {
+                setTheme(true); // Tema oscuro
+            } else {
+                // Por defecto claro
+                setTheme(false); // Tema claro
+            }
+
+            // --- Renderizar Iconos Lucide ---
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+

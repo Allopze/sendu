@@ -1,0 +1,2819 @@
+<!DOCTYPE html>
+<html lang="es" class="light" data-theme="light"> <!-- Iniciar en modo claro por defecto -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sendu - Compartir Archivos</title>
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg">
+    <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
+    <link rel="shortcut icon" href="/assets/icons/favicon.ico">
+    <link rel="mask-icon" href="/assets/icons/favicon.svg" color="#dc2626">
+    <!-- Tailwind CSS (build) -->
+    <link rel="stylesheet" href="/dist/tailwind.css">
+    <!-- Lucide Icons -->
+    <!-- CORRECCIÓN: Se cambió de 'lucide-react' a la versión UMD de 'lucide' -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Variables CSS */
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --primary: #dc2626;
+            --success: #16a34a;
+            --warning: #f59e0b;
+            --text-primary: #ffffff;
+        }
+
+        :host, html {
+            text-size-adjust: 100%;
+        }
+        
+        [data-theme="light"] {
+            --glass-bg: rgba(239, 68, 68, 0.1);
+            --glass-border: rgba(239, 68, 68, 0.2);
+            --text-primary: #1f2937;
+        }
+        
+        /* Estilos base */
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+            color: var(--text-primary);
+            background: radial-gradient(circle at 10% 20%, rgba(220, 38, 38, 0.55), transparent 55%),
+                        radial-gradient(circle at 90% 0%, rgba(127, 29, 29, 0.45), transparent 50%),
+                        linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.72));
+        }
+
+        body::before,
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            z-index: -3;
+            pointer-events: none;
+        }
+
+        body::before {
+            background: radial-gradient(40% 50% at 65% 25%, rgba(239, 68, 68, 0.32), transparent 72%),
+                        radial-gradient(25% 35% at 15% 80%, rgba(59, 130, 246, 0.24), transparent 80%);
+            filter: blur(25px);
+            animation: aurora-shift 28s ease-in-out infinite;
+            mix-blend-mode: screen;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            inset: -20% -20% -30% -20%;
+            background:
+                conic-gradient(from 45deg, rgba(239, 68, 68, 0.18), rgba(34, 197, 94, 0.05), rgba(59, 130, 246, 0.12), rgba(239, 68, 68, 0.2)),
+                radial-gradient(55% 65% at 85% 15%, rgba(248, 113, 113, 0.18), transparent 70%);
+            filter: blur(40px);
+            animation: orbit-sweep 32s linear infinite;
+            mix-blend-mode: lighten;
+            opacity: 0.7;
+        }
+
+        .bg-orbs {
+            position: fixed;
+            inset: 0;
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        .bg-orbs::before,
+        .bg-orbs::after {
+            content: '';
+            position: absolute;
+            width: 65vmax;
+            height: 65vmax;
+            border-radius: 50%;
+            filter: blur(65px);
+            opacity: 0.45;
+            animation: orb-drift 26s ease-in-out infinite alternate;
+        }
+
+        .bg-orbs::before {
+            top: -20vmax;
+            left: -20vmax;
+            background: radial-gradient(circle, rgba(239, 68, 68, 0.55), rgba(148, 163, 184, 0.05));
+            animation-delay: -8s;
+        }
+
+        .bg-orbs::after {
+            bottom: -28vmax;
+            right: -22vmax;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.45), rgba(148, 163, 184, 0.08));
+            animation-delay: -16s;
+        }
+
+        html[data-theme="light"] body {
+            background: radial-gradient(circle at 10% 20%, rgba(239, 68, 68, 0.28), transparent 55%),
+                        radial-gradient(circle at 90% 0%, rgba(249, 115, 22, 0.2), transparent 50%),
+                        linear-gradient(145deg, rgba(255, 255, 255, 0.97), rgba(255, 244, 244, 0.9));
+        }
+
+        html[data-theme="light"] body::before {
+            background: radial-gradient(40% 50% at 65% 25%, rgba(239, 68, 68, 0.25), transparent 72%),
+                        radial-gradient(25% 35% at 15% 80%, rgba(249, 115, 22, 0.18), transparent 80%);
+            opacity: 0.7;
+        }
+
+        html[data-theme="light"] body::after {
+            opacity: 0.5;
+            mix-blend-mode: screen;
+            filter: blur(48px);
+        }
+
+        /* Iconos Lucide */
+        .icon {
+            width: 1.25rem;
+            height: 1.25rem;
+            stroke-width: 2;
+        }
+        .icon-lg {
+            width: 3rem;
+            height: 3rem;
+            stroke-width: 1.5;
+        }
+        
+        /* Borde grueso personalizado */
+        .border-3 {
+            border-width: 3px;
+        }
+        
+        /* Animaciones personalizadas */
+        @keyframes slide-in-from-top {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-in {
+            animation-fill-mode: both;
+        }
+        
+        .slide-in-from-top-4 {
+            animation-name: slide-in-from-top;
+        }
+        
+        .duration-500 {
+            animation-duration: 500ms;
+        }
+
+        @keyframes aurora-shift {
+            0%   { transform: translate3d(-2%, -1%, 0) scale(1); opacity: 0.65; }
+            25%  { transform: translate3d(4%, 6%, 0) scale(1.05); opacity: 0.85; }
+            50%  { transform: translate3d(-3%, 4%, 0) scale(1.02); opacity: 0.7; }
+            75%  { transform: translate3d(2%, -4%, 0) scale(1.08); opacity: 0.9; }
+            100% { transform: translate3d(-1%, 3%, 0) scale(1.03); opacity: 0.65; }
+        }
+
+        @keyframes orbit-sweep {
+            0%   { transform: rotate(0deg) scale(1); opacity: 0.65; }
+            25%  { transform: rotate(90deg) scale(1.05); opacity: 0.8; }
+            50%  { transform: rotate(180deg) scale(1.02); opacity: 0.7; }
+            75%  { transform: rotate(270deg) scale(1.08); opacity: 0.85; }
+            100% { transform: rotate(360deg) scale(1); opacity: 0.65; }
+        }
+
+        @keyframes orb-drift {
+            0%   { transform: translate3d(-8%, -4%, 0) scale(1); opacity: 0.4; }
+            50%  { transform: translate3d(6%, 8%, 0) scale(1.08); opacity: 0.55; }
+            100% { transform: translate3d(-6%, 4%, 0) scale(1.03); opacity: 0.45; }
+        }
+
+        @keyframes float-up {
+            0% { transform: translateY(8px); opacity: 0; }
+            60% { transform: translateY(-2px); opacity: 1; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 0 rgba(220, 38, 38, 0.0); }
+            50% { box-shadow: 0 0 25px rgba(220, 38, 38, 0.25); }
+            100% { box-shadow: 0 0 0 rgba(220, 38, 38, 0.0); }
+        }
+
+        @keyframes progress-glow {
+            0% { background-position: 0% 0; }
+            100% { background-position: 200% 0; }
+        }
+        
+        /* Nuevo diseño del toggle theme */
+        .theme-toggle {
+            position: relative;
+            width: 56px;
+            height: 32px;
+            background: var(--glass-bg);
+            border: 2px solid var(--glass-border);
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            padding: 0 4px;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(220, 38, 38, 0.2);
+            border-color: var(--primary);
+        }
+
+        .theme-icon {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            display: block;
+            transform: translateY(-50%) scale(0.6);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .theme-icon.sun {
+            left: 8px;
+            background: var(--warning);
+            box-shadow: 0 0 6px rgba(245, 158, 11, 0.4);
+        }
+
+        .theme-icon.moon {
+            right: 8px;
+            border: 2px solid var(--text-primary);
+            background: transparent;
+        }
+
+        /* Ajustes para enlaces generados */
+        .result-link {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .download-link-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            letter-spacing: 0.01em;
+            transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+            word-break: break-all;
+            backdrop-filter: blur(16px) saturate(165%);
+            -webkit-backdrop-filter: blur(16px) saturate(165%);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 18px 40px -30px rgba(220, 38, 38, 0.4);
+        }
+
+        .download-link-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25);
+            outline: none;
+        }
+
+        .copy-link-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.75rem;
+            background: linear-gradient(90deg, #dc2626, #b91c1c);
+            color: #ffffff;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+            backdrop-filter: blur(16px) saturate(170%);
+            -webkit-backdrop-filter: blur(16px) saturate(170%);
+            box-shadow: 0 18px 38px -25px rgba(220, 38, 38, 0.55);
+        }
+
+        .copy-link-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 18px 32px -22px rgba(220, 38, 38, 0.55);
+        }
+
+        .copy-link-button:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.35);
+        }
+
+        .copy-link-button .icon {
+            width: 1.1rem;
+            height: 1.1rem;
+        }
+
+        @media (min-width: 640px) {
+            .result-link {
+                flex-direction: row;
+                align-items: center;
+            }
+
+            .result-link .download-link-input {
+                flex: 1;
+            }
+
+            .copy-link-button {
+                width: auto;
+            }
+        }
+
+        [data-theme="light"] .download-link-input {
+            color: #1f2937;
+        }
+
+        [data-theme="dark"] .theme-icon.moon {
+            opacity: 1;
+            transform: translateY(-50%) scale(1);
+        }
+
+        [data-theme="light"] .theme-icon.sun {
+            opacity: 1;
+            transform: translateY(-50%) scale(1);
+        }
+
+        [data-theme="light"] .theme-icon.moon {
+            opacity: 0;
+            transform: translateY(-50%) scale(0.6);
+        }
+
+        .theme-toggle::before {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            background: linear-gradient(135deg, var(--primary), var(--success));
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4);
+            left: 4px;
+        }
+
+        [data-theme="light"] .theme-toggle::before {
+            transform: translateX(24px);
+        }
+
+        #upload-success-banner {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(248, 113, 113, 0.12));
+            border: 1px solid rgba(34, 197, 94, 0.25);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            backdrop-filter: blur(18px) saturate(160%);
+            -webkit-backdrop-filter: blur(18px) saturate(160%);
+            box-shadow: 0 24px 45px -30px rgba(34, 197, 94, 0.35);
+        }
+
+        html[data-theme="light"] #upload-success-banner {
+            background: linear-gradient(135deg, rgba(187, 247, 208, 0.6), rgba(255, 241, 241, 0.6));
+            border-color: rgba(34, 197, 94, 0.3);
+        }
+        
+        /* Toggle Switch personalizado */
+        .toggle-switch {
+            position: relative;
+            width: 56px;
+            height: 28px;
+            background: #374151;
+            border-radius: 14px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        /* Estilos para la barra de progreso */
+        progress {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 12px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        progress::-webkit-progress-bar {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+        }
+        
+        progress::-webkit-progress-value {
+            background: linear-gradient(90deg, rgba(220, 38, 38, 0.85), rgba(239, 68, 68, 0.95), rgba(249, 115, 22, 0.85));
+            border-radius: 8px;
+            transition: width 0.3s ease;
+            background-size: 200% 100%;
+            animation: progress-glow 2.5s linear infinite;
+        }
+        
+        progress::-moz-progress-bar {
+            background: linear-gradient(90deg, rgba(220, 38, 38, 0.85), rgba(239, 68, 68, 0.95), rgba(249, 115, 22, 0.85));
+            border-radius: 8px;
+            background-size: 200% 100%;
+            animation: progress-glow 2.5s linear infinite;
+        }
+        
+        [data-theme="light"] progress {
+            background: rgba(229, 231, 235, 0.8);
+            border-color: rgba(209, 213, 219, 0.5);
+        }
+        
+        [data-theme="light"] progress::-webkit-progress-bar {
+            background: rgba(229, 231, 235, 0.8);
+        }
+        
+        [data-theme="light"] progress::-webkit-progress-value {
+            background: linear-gradient(90deg, #dc2626, #ef4444, #f97316);
+        }
+        
+        [data-theme="light"] progress::-moz-progress-bar {
+            background: linear-gradient(90deg, #dc2626, #ef4444, #f97316);
+        }
+        
+        .toggle-switch:before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .toggle-switch.active {
+            background: linear-gradient(45deg, #6366f1, #a855f7);
+        }
+        
+        .toggle-switch.active:before {
+            transform: translateX(28px);
+        }
+        
+        /* Iconos dentro del toggle */
+        .toggle-icon {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .toggle-icon.sun {
+            right: 6px;
+            color: #fbbf24;
+        }
+        
+        .toggle-icon.moon {
+            left: 6px;
+            color: #9ca3af;
+        }
+
+        /* --- Estilo Glassmorphic --- */
+        .glass-container {
+            position: relative;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.58));
+            border-radius: 1.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(24px) saturate(185%);
+            -webkit-backdrop-filter: blur(24px) saturate(185%);
+            box-shadow:
+                0 24px 50px -28px rgba(15, 23, 42, 0.85),
+                0 16px 40px -30px rgba(220, 38, 38, 0.45);
+            overflow: hidden;
+            transition: transform 0.45s ease, box-shadow 0.45s ease, border-color 0.45s ease, background 0.45s ease;
+            animation: float-up 0.6s ease forwards;
+        }
+
+        .glass-container::before {
+            content: '';
+            position: absolute;
+            top: -35%;
+            left: -20%;
+            width: 70%;
+            height: 65%;
+            background: radial-gradient(circle at top, rgba(248, 113, 113, 0.28), transparent 70%);
+            opacity: 0.65;
+            transform: rotate(12deg);
+            transition: transform 0.6s ease, opacity 0.6s ease;
+        }
+
+        .glass-container::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            pointer-events: none;
+            mix-blend-mode: overlay;
+            opacity: 0.7;
+        }
+
+        .glass-container:hover {
+            transform: translateY(-6px) scale(1.01);
+            box-shadow:
+                0 32px 65px -32px rgba(15, 23, 42, 0.9),
+                0 24px 50px -30px rgba(220, 38, 38, 0.55);
+        }
+
+        .glass-container:hover::before {
+            opacity: 0.85;
+            transform: rotate(4deg) translateY(12%);
+        }
+
+        /* Navbar específica */
+        nav.glass-container {
+            border-radius: 0;
+            border: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.78), rgba(30, 41, 59, 0.65));
+            backdrop-filter: blur(24px) saturate(200%);
+            -webkit-backdrop-filter: blur(24px) saturate(200%);
+            box-shadow: 0 24px 35px -28px rgba(15, 23, 42, 0.75);
+        }
+
+        nav.glass-container::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, rgba(220, 38, 38, 0.18), transparent 65%);
+            pointer-events: none;
+            opacity: 0.4;
+        }
+
+        .light nav.glass-container {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(255, 242, 242, 0.82));
+            border-bottom: 1px solid rgba(239, 68, 68, 0.22);
+            box-shadow: 0 22px 30px -28px rgba(239, 68, 68, 0.35);
+        }
+
+        /* Logo por tema */
+        .brand-logo { width: 28px; height: 28px; display: none; }
+        [data-theme="light"] .logo-light { display: inline-block; }
+        [data-theme="light"] .logo-dark { display: none; }
+        [data-theme="dark"] .logo-dark { display: inline-block; }
+        [data-theme="dark"] .logo-light { display: none; }
+
+        /* Menú desplegable de usuario */
+        .user-menu-container {
+            position: relative;
+        }
+
+        .user-menu-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(220, 38, 38, 0.15);
+            border: 2px solid rgba(220, 38, 38, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(12px) saturate(180%);
+            -webkit-backdrop-filter: blur(12px) saturate(180%);
+            box-shadow: 0 12px 24px -18px rgba(248, 113, 113, 0.6);
+        }
+
+        .user-menu-button:hover {
+            background: rgba(220, 38, 38, 0.25);
+            border-color: rgba(220, 38, 38, 0.5);
+            transform: scale(1.05);
+            box-shadow: 0 16px 28px -16px rgba(220, 38, 38, 0.55);
+        }
+
+        .user-menu-button i {
+            color: #dc2626;
+        }
+
+        [data-theme="light"] .user-menu-button {
+            background: rgba(220, 38, 38, 0.1);
+            border-color: rgba(220, 38, 38, 0.2);
+            box-shadow: 0 14px 26px -20px rgba(239, 68, 68, 0.4);
+        }
+
+        [data-theme="light"] .user-menu-button:hover {
+            background: rgba(220, 38, 38, 0.2);
+        }
+
+        .user-dropdown {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            min-width: 200px;
+            background: linear-gradient(140deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.82));
+            backdrop-filter: blur(22px) saturate(180%);
+            -webkit-backdrop-filter: blur(22px) saturate(180%);
+            border: 1px solid rgba(220, 38, 38, 0.35);
+            border-radius: 16px;
+            padding: 12px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-12px) scale(0.98);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            box-shadow: 0 22px 45px -30px rgba(15, 23, 42, 0.7);
+            overflow: hidden;
+        }
+
+        .user-dropdown::before {
+            content: '';
+            position: absolute;
+            inset: -40% -40% auto;
+            height: 55%;
+            background: radial-gradient(circle at top, rgba(248, 113, 113, 0.28), transparent 70%);
+            opacity: 0.6;
+            transform: rotate(6deg);
+            pointer-events: none;
+        }
+
+        .user-dropdown.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+
+        [data-theme="light"] .user-dropdown {
+            background: linear-gradient(140deg, rgba(255, 255, 255, 0.94), rgba(255, 241, 241, 0.88));
+            border-color: rgba(220, 38, 38, 0.22);
+            box-shadow: 0 20px 35px -28px rgba(239, 68, 68, 0.28);
+        }
+
+        .user-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            color: #e2e8f0;
+            font-size: 14px;
+            text-decoration: none;
+        }
+
+        .user-dropdown-item:hover {
+            background: rgba(220, 38, 38, 0.18);
+            transform: translateX(4px);
+            box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.25);
+        }
+
+        [data-theme="light"] .user-dropdown-item {
+            color: #1f2937;
+        }
+
+        [data-theme="light"] .user-dropdown-item:hover {
+            color: #7f1d1d;
+        }
+
+        [data-theme="light"] .user-dropdown-item {
+            color: #1e293b;
+        }
+
+        [data-theme="light"] .user-dropdown-item:hover {
+            background: rgba(220, 38, 38, 0.12);
+        }
+
+        .user-dropdown-divider {
+            height: 1px;
+            background: linear-gradient(90deg, rgba(248, 113, 113, 0), rgba(248, 113, 113, 0.35), rgba(248, 113, 113, 0));
+            margin: 8px 0;
+        }
+
+        .user-info {
+            padding: 12px 14px;
+            border: 1px solid rgba(220, 38, 38, 0.25);
+            border-radius: 12px;
+            background: linear-gradient(120deg, rgba(220, 38, 38, 0.18), rgba(15, 23, 42, 0.4));
+            margin-bottom: 10px;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .user-info-name {
+            font-weight: 600;
+            color: #dc2626;
+            font-size: 14px;
+        }
+
+        .user-info-email {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        [data-theme="light"] .user-info {
+            background: linear-gradient(120deg, rgba(239, 68, 68, 0.12), rgba(255, 255, 255, 0.6));
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        [data-theme="light"] .user-info-email {
+            color: #64748b;
+        }
+
+        /* Botones acción secundarios */
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.55rem 1.2rem;
+            border-radius: 0.85rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
+            color: #f8fafc !important;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.25);
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
+        }
+
+        [data-theme="light"] .btn-secondary {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border-color: rgba(239, 68, 68, 0.35);
+            color: #f8fafc !important;
+        }
+
+        [data-theme="light"] .btn-secondary:hover {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+        }
+
+        .btn-outline {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.55rem 1.2rem;
+            border-radius: 0.85rem;
+            font-weight: 600;
+            background: rgba(148, 163, 184, 0.18);
+            color: #f8fafc !important;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .btn-outline:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.25);
+            background: rgba(100, 116, 139, 0.25);
+        }
+
+        [data-theme="light"] .btn-outline {
+            background: rgba(248, 250, 252, 0.95);
+            border-color: rgba(203, 213, 225, 0.7);
+            color: #0f172a !important;
+        }
+
+        [data-theme="light"] .btn-outline:hover {
+            background: rgba(226, 232, 240, 0.95);
+        }
+
+        /* Ajustes para modo claro */
+        .light .glass-container {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(255, 245, 245, 0.72));
+            border: 1px solid rgba(239, 68, 68, 0.22);
+            box-shadow:
+                0 24px 45px -30px rgba(239, 68, 68, 0.28),
+                0 20px 45px -32px rgba(15, 23, 42, 0.18);
+            color: #0f172a;
+        }
+
+        .light .glass-container::before {
+            background: radial-gradient(circle at top, rgba(239, 68, 68, 0.26), rgba(255, 255, 255, 0.05) 70%);
+        }
+
+        .light .glass-container::after {
+            border: 1px solid rgba(239, 68, 68, 0.18);
+            opacity: 0.85;
+        }
+        
+        /* Botón de vidrio - Tema Oscuro */
+        .glass-button {
+            background: linear-gradient(120deg, rgba(127, 29, 29, 0.35), rgba(76, 29, 149, 0.22));
+            border: 1px solid rgba(185, 28, 28, 0.4);
+            backdrop-filter: blur(14px) saturate(180%);
+            -webkit-backdrop-filter: blur(14px) saturate(180%);
+            transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease, border-color 0.3s ease;
+            box-shadow: 0 14px 32px -22px rgba(239, 68, 68, 0.6);
+        }
+        .glass-button:hover,
+        .glass-button:focus {
+            background: linear-gradient(120deg, rgba(153, 27, 27, 0.5), rgba(109, 40, 217, 0.3));
+            transform: translateY(-2px);
+            box-shadow: 0 18px 36px -20px rgba(248, 113, 113, 0.65);
+            border-color: rgba(248, 113, 113, 0.55);
+        }
+        .light .glass-button {
+            background: linear-gradient(120deg, rgba(239, 68, 68, 0.12), rgba(254, 226, 226, 0.55));
+            border: 1px solid rgba(239, 68, 68, 0.18);
+            color: #0f172a;
+            box-shadow: 0 16px 32px -24px rgba(239, 68, 68, 0.28);
+        }
+        .light .glass-button:hover,
+        .light .glass-button:focus {
+            background: linear-gradient(120deg, rgba(239, 68, 68, 0.18), rgba(254, 212, 212, 0.55));
+        }
+
+        button,
+        .btn-outline,
+        .copy-link-button,
+        .glass-button {
+            transition-property: background, color, transform, box-shadow, border-color;
+            transition-duration: 0.3s;
+            transition-timing-function: ease;
+        }
+
+        button:active,
+        .btn-outline:active,
+        .copy-link-button:active,
+        .glass-button:active {
+            transform: scale(0.98);
+        }
+
+        h1, h2, h3 {
+            transition: transform 0.3s ease, text-shadow 0.3s ease;
+        }
+
+        h1:hover,
+        h2:hover,
+        h3:hover {
+            transform: translateY(-3px);
+            text-shadow: 0 16px 32px rgba(220, 38, 38, 0.25);
+        }
+
+        /* Fondo con degradado animado - Tema Oscuro */
+        body {
+            background: linear-gradient(-45deg, #000000, #1a1a1a, #2d2d2d, #404040);
+            background-size: 400% 400%;
+            animation: gradientBG 20s ease infinite;
+            height: 100vh;
+        }
+       .light body {
+           /* Gradiente suave en grises con un toque rojizo para concordar con el tema oscuro */
+           background: linear-gradient(-45deg, #ffffff, #f8fafc, #f3f4f6, #fee2e2);
+           background-size: 400% 400%;
+           animation: gradientBG 25s ease infinite;
+       }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Estilo de la barra de progreso */
+        progress[value]::-webkit-progress-bar {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 0.5rem;
+        }
+        .light progress[value]::-webkit-progress-bar {
+            background-color: rgba(148, 163, 184, 0.3); /* Fondo gris claro */
+        }
+        progress[value]::-webkit-progress-value {
+            background-image: linear-gradient(to right, #6366f1, #a855f7);
+            border-radius: 0.5rem;
+            transition: width 0.3s ease;
+        }
+        
+        /* Ocultar input[type=file] */
+        .file-input {
+            width: 0.1px;
+            height: 0.1px;
+            opacity: 0;
+            overflow: hidden;
+            position: absolute;
+            z-index: -1;
+        }
+
+        /* Estilos específicos para cada modo */
+        .light {
+            color: #1f2937; /* Gris oscuro para el texto principal */
+        }
+        
+        .dark {
+            color: #f5f5f5; /* Gris muy claro para el texto principal en oscuro */
+        }
+        
+        /* Títulos en modo claro */
+        .light h1, .light .text-white {
+            color: #1f2937 !important; /* Gris muy oscuro para títulos */
+        }
+        
+        /* Texto secundario en modo claro */
+        .light .text-gray-200, .light .text-gray-300, .light .text-gray-400 {
+            color: #6b7280 !important; /* Gris medio */
+        }
+        
+        /* Placeholders en modo claro */
+        .light input::placeholder {
+            color: #9ca3af !important; /* Gris claro para placeholders */
+        }
+        
+        /* Inputs en modo claro */
+        .light input {
+            color: #374151 !important; /* Gris oscuro para el texto de inputs */
+        }
+        
+        /* Botón de toggle en modo claro */
+        .light #theme-toggle {
+            color: #1f2937 !important;
+        }
+        
+        #drop-zone {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(140deg, rgba(15, 23, 42, 0.68), rgba(220, 38, 38, 0.24));
+            border: 1px solid rgba(248, 113, 113, 0.22);
+            backdrop-filter: blur(22px) saturate(170%);
+            -webkit-backdrop-filter: blur(22px) saturate(170%);
+            box-shadow:
+                0 22px 40px -28px rgba(15, 23, 42, 0.85),
+                inset 0 1px 0 rgba(255, 255, 255, 0.12);
+            transition: transform 0.45s ease, box-shadow 0.45s ease, border-color 0.45s ease, background 0.45s ease;
+            animation: pulse-glow 7s ease-in-out infinite;
+        }
+
+        #drop-zone::before {
+            content: '';
+            position: absolute;
+            inset: -45% -20% auto -20%;
+            height: 65%;
+            background: linear-gradient(120deg, rgba(248, 113, 113, 0.4), rgba(236, 72, 153, 0));
+            opacity: 0.65;
+            transform: translateY(-20%) rotate(6deg);
+            transition: transform 0.6s ease, opacity 0.6s ease;
+            pointer-events: none;
+        }
+
+        #drop-zone:hover,
+        #drop-zone:focus-within {
+            transform: translateY(-4px) scale(1.01);
+            box-shadow:
+                0 30px 55px -28px rgba(15, 23, 42, 0.9),
+                0 18px 32px -26px rgba(220, 38, 38, 0.45);
+            border-color: rgba(248, 113, 113, 0.35);
+        }
+
+        #drop-zone:hover::before,
+        #drop-zone:focus-within::before {
+            opacity: 0.9;
+            transform: translateY(10%) rotate(0deg);
+        }
+
+        /* Dropzone en modo claro */
+        .light #drop-zone {
+            border-color: rgba(239, 68, 68, 0.28) !important;
+            background: linear-gradient(140deg, rgba(255, 255, 255, 0.94), rgba(254, 226, 226, 0.78)) !important;
+            box-shadow:
+                0 26px 48px -30px rgba(239, 68, 68, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.65);
+        }
+        .light #drop-zone:hover,
+        .light #drop-zone:focus-within {
+            border-color: rgba(220, 38, 38, 0.45) !important;
+            background: linear-gradient(140deg, rgba(255, 255, 255, 0.96), rgba(254, 226, 226, 0.82)) !important;
+        }
+        
+        /* Iconos en modo claro */
+        .light .icon, .light .icon-lg {
+            color: #ef4444 !important; /* Iconos rojos */
+        }
+        
+        /* Texto de archivo en modo claro */
+        .light .file-name {
+            color: #1f2937 !important;
+        }
+        
+        /* Elementos de progreso y resultado en modo claro */
+        .light .bg-white\/10 {
+            background-color: rgba(59, 130, 246, 0.1) !important;
+        }
+        
+        /* Mensaje de información en modo claro */
+        .light #expiry-info {
+            color: #6b7280 !important;
+        }
+        
+        /* Estilos específicos para el tema oscuro */
+        .dark h1, .dark .text-white {
+            color: #ffffff !important; /* Blanco puro */
+        }
+        
+        .dark .text-gray-200, .dark .text-gray-300, .dark .text-gray-400 {
+            color: #d1d5db !important; /* Gris claro */
+        }
+        
+        .dark input::placeholder {
+            color: #9ca3af !important; /* Gris medio para placeholders */
+        }
+        
+        .dark input {
+            color: #f5f5f5 !important; /* Gris muy claro para inputs */
+        }
+        
+        .dark #drop-zone {
+            border-color: rgba(248, 113, 113, 0.25) !important;
+        }
+        .dark #drop-zone:hover,
+        .dark #drop-zone:focus-within {
+            border-color: rgba(248, 113, 113, 0.45) !important;
+            background-color: rgba(127, 29, 29, 0.28) !important;
+        }
+        
+        .dark .icon, .dark .icon-lg {
+            color: #f87171 !important; /* Iconos rojizos */
+        }
+    </style>
+</head>
+<body class="dark:bg-slate-900 dark:text-slate-200 light:bg-gray-50 light:text-gray-800 overflow-x-hidden transition-colors duration-300">
+    <!-- Notificación global -->
+    <div class="bg-orbs"></div>
+    <div id="global-notification" class="fixed inset-x-0 top-4 z-50 flex justify-center px-4 pointer-events-none hidden">
+        <div id="global-notification-content" class="max-w-lg w-full px-4 py-3 rounded-lg shadow-lg text-sm font-medium text-white text-center bg-slate-800/90 backdrop-blur"></div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="fixed top-0 left-0 right-0 z-50 glass-container px-6 py-3 flex items-center justify-between">
+        <!-- Logo y nombre -->
+        <a id="home-link" class="flex items-center gap-3 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded-lg px-1" aria-label="Ir al inicio de Sendu" href="/">
+            <div class="w-9 h-9 flex items-center justify-center">
+                <img src="/assets/branding/sendu-light.svg" alt="Sendu" class="brand-logo logo-light" width="28" height="28">
+                <img src="/assets/branding/sendu-dark.svg" alt="Sendu" class="brand-logo logo-dark" width="28" height="28">
+            </div>
+            <div>
+                <h1 class="text-lg font-bold text-white dark:text-white light:text-gray-800">Sendu</h1>
+            </div>
+        </a>
+        
+        <!-- Toggle de tema tipo interruptor -->
+        <div class="navbar-actions flex items-center gap-3">
+            <!-- Menú de usuario -->
+            <div class="user-menu-container">
+                <button class="user-menu-button" id="user-menu-btn" aria-label="Menú de usuario">
+                    <i data-lucide="user" style="width: 20px; height: 20px;"></i>
+                </button>
+                
+                <div class="user-dropdown" id="user-dropdown">
+                    <!-- Contenido dinámico -->
+                </div>
+            </div>
+            
+            <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">
+                <span class="theme-icon sun" aria-hidden="true"></span>
+                <span class="theme-icon moon" aria-hidden="true"></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Contenedor principal -->
+    <div id="app-container" class="min-h-screen w-full flex items-center justify-center p-4 pt-18 transition-all duration-300">
+        <!-- El contenido de la vista se inyecta dinámicamente -->
+    </div>
+
+    <!-- 
+    ============================================================
+    TEMPLATES (Se clonan en la vista principal)
+    ============================================================
+    -->
+    <template id="upload-view-template">
+        <div class="glass-container p-8 md:p-12 w-full max-w-4xl mx-auto">
+            <!-- Header -->
+            <div class="text-center space-y-4 mb-12">
+                <h2 class="text-4xl md:text-5xl font-bold text-white dark:text-white light:text-gray-800">Sube tu archivo</h2>
+                <p class="text-xl text-gray-200 dark:text-gray-200 light:text-gray-600">Arrastra y suelta o haz clic para seleccionar</p>
+            </div>
+
+            <!-- Dropzone Principal -->
+            <form id="upload-form">
+                <label for="file-input" id="drop-zone" class="relative w-full h-80 md:h-96 border-3 border-dashed border-gray-400 dark:border-gray-500 light:border-blue-400 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-500 hover:border-indigo-400 dark:hover:border-indigo-400 light:hover:border-blue-500 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-blue-50 hover:scale-105">
+                    <i data-lucide="upload-cloud" class="w-20 h-20 md:w-24 md:h-24 text-gray-300 dark:text-gray-400 light:text-blue-500 mb-4 stroke-1"></i>
+                    <span id="drop-main-text" class="font-semibold text-xl md:text-2xl text-gray-200 dark:text-gray-200 light:text-gray-700 mb-2">Arrastra tu archivo aquí</span>
+                    <span id="drop-sub-text" class="text-base text-gray-300 dark:text-gray-400 light:text-gray-500 mb-4">o haz clic para seleccionar</span>
+                    <span class="text-sm text-gray-400 dark:text-gray-500 light:text-gray-400 px-4 py-2 bg-black/20 dark:bg-white/10 light:bg-white/70 rounded-full">Tamaño máximo: 10GB</span>
+                    <input type="file" id="file-input" class="file-input">
+                    
+                    <!-- Overlay al arrastrar -->
+                    <div id="drop-overlay" class="absolute inset-0 bg-gradient-to-br from-indigo-500/60 to-purple-600/60 rounded-2xl flex items-center justify-center text-white text-4xl font-bold opacity-0 transition-all duration-300 pointer-events-none backdrop-blur-sm">
+                        <div class="text-center">
+                            <i data-lucide="download" class="w-16 h-16 mx-auto mb-4"></i>
+                            ¡Suelta el archivo aquí!
+                        </div>
+                    </div>
+                </label>
+
+                <div id="upload-success-banner" class="hidden mt-6 space-y-3 text-center">
+                    <p class="text-base font-semibold text-green-300 dark:text-green-300 light:text-green-700">Enlace de descarga listo!</p>
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-3">
+                        <input 
+                            type="text" 
+                            id="upload-success-url" 
+                            readonly
+                            class="download-link-input sm:max-w-xl"
+                        >
+                        <button 
+                            type="button" 
+                            id="upload-success-copy" 
+                            class="copy-link-button"
+                        >
+                            <i data-lucide="copy" class="icon"></i>
+                            Copiar enlace
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Opciones expandibles (ocultas inicialmente) -->
+                <div id="upload-options" class="hidden mt-8 space-y-6 animate-in slide-in-from-top-4 duration-500">
+                    <div class="border-t border-gray-300 dark:border-gray-600 light:border-blue-200 pt-6">
+                        <h3 class="text-xl font-semibold text-gray-200 dark:text-gray-200 light:text-gray-700 mb-6 text-center">Configurar opciones de compartir</h3>
+                        <div class="mb-6 rounded-xl border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200 dark:text-amber-200 light:text-amber-700 flex items-start gap-3">
+                            <i data-lucide="clock" class="w-5 h-5 mt-0.5"></i>
+                            <p>
+                                Todos los archivos se eliminan automáticamente 15 días después de la subida. Puedes añadir una expiración más corta si lo necesitas.
+                            </p>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <!-- Contraseña -->
+                            <div class="space-y-2">
+                                <label for="password" class="block text-sm font-medium text-gray-200 dark:text-gray-200 light:text-gray-700">
+                                    <i data-lucide="lock" class="w-4 h-4 inline mr-2"></i>
+                                    Contraseña (Opcional)
+                                </label>
+                                <input type="password" id="password" placeholder="Dejar vacío para sin contraseña" class="glass-button w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 light:focus:ring-red-500 text-white dark:text-white light:text-gray-700 placeholder-gray-400 light:placeholder-gray-500 text-sm">
+                            </div>
+                            
+                            <!-- Expiración -->
+                            <div class="space-y-2">
+                                <label for="expires" class="block text-sm font-medium text-gray-200 dark:text-gray-200 light:text-gray-700">
+                                    <i data-lucide="calendar" class="w-4 h-4 inline mr-2"></i>
+                                    Expiración (Días)
+                                </label>
+                                <input type="number" id="expires" placeholder="0 = Sin expiración manual" min="0" max="15" step="1" inputmode="numeric" pattern="\d*" class="glass-button w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 light:focus:ring-red-500 text-white dark:text-white light:text-gray-700 placeholder-gray-400 light:placeholder-gray-500 text-sm">
+                                <span class="text-xs text-gray-400 dark:text-gray-500 light:text-gray-400">0 = Se elimina automáticamente en 15 días (valor por defecto)</span>
+                            </div>
+                            
+                            <!-- Máximo de descargas -->
+                            <div class="space-y-2">
+                                <label for="maxDownloads" class="block text-sm font-medium text-gray-200 dark:text-gray-200 light:text-gray-700">
+                                    <i data-lucide="download" class="w-4 h-4 inline mr-2"></i>
+                                    Máx. Descargas (Opcional)
+                                </label>
+                                <input type="number" id="maxDownloads" placeholder="Dejar vacío = ilimitado" min="1" class="glass-button w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 light:focus:ring-red-500 text-white dark:text-white light:text-gray-700 placeholder-gray-400 light:placeholder-gray-500 text-sm">
+                                <span class="text-xs text-gray-400 dark:text-gray-500 light:text-gray-400">Vacío = Descargas ilimitadas</span>
+
+
+
+                        <!-- Acciones de carga -->
+                        <div class="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:justify-center">
+                            <button type="button" id="start-upload" class="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 text-lg shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center gap-3">
+                                <i data-lucide="upload" class="w-5 h-5"></i>
+                                Subir archivo
+                            </button>
+                            <button type="button" id="clear-selection" class="flex items-center justify-center gap-2 rounded-xl border border-red-400/60 px-6 py-4 text-sm font-medium text-red-200 dark:text-red-200 light:text-red-600 transition-all duration-300 hover:bg-red-500/10 disabled:opacity-50 disabled:pointer-events-none">
+                                <i data-lucide="x-circle" class="w-5 h-5"></i>
+                                Eliminar seleccion
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Lista de Subidas (Progreso) -->
+            <div id="upload-list" class="space-y-4 mt-8">
+                <!-- Los items de progreso se insertan aquí -->
+            </div>
+        </div>
+    </template>
+
+    <template id="download-view-template">
+        <div class="glass-container p-8 md:p-12 w-full max-w-2xl mx-auto space-y-8">
+            <!-- Header -->
+            <div class="text-center space-y-4">
+                <i data-lucide="file-down" class="w-20 h-20 text-white dark:text-white light:text-blue-600 mx-auto stroke-1"></i>
+                <h1 class="text-4xl md:text-5xl font-bold text-white dark:text-white light:text-gray-800">Listo para descargar</h1>
+            </div>
+
+            <!-- Info Archivo -->
+            <div class="bg-white/10 dark:bg-white/10 light:bg-blue-50 p-6 rounded-xl text-center">
+                <p id="file-name" class="font-semibold text-2xl text-white dark:text-white light:text-gray-800 break-words mb-2">nombre_archivo.zip</p>
+                <p id="file-size" class="text-lg text-gray-200 dark:text-gray-200 light:text-gray-600">12.3 MB</p>
+            </div>
+
+            <!-- Formulario de Descarga -->
+            <form id="download-form" class="space-y-6">
+                <div id="password-group" class="hidden">
+                    <label for="download-password" class="block text-base font-medium text-gray-200 dark:text-gray-200 light:text-gray-700 mb-2">
+                        <i data-lucide="lock" class="w-4 h-4 inline mr-2"></i>
+                        Se requiere contraseña
+                    </label>
+                    <input type="password" id="download-password" placeholder="••••••••" class="glass-button w-full px-4 py-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 light:focus:ring-red-500 text-white dark:text-white light:text-gray-700 placeholder-gray-400 light:placeholder-gray-500 text-lg">
+                </div>
+                
+                <button type="submit" id="download-button" class="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold py-5 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-3 text-xl shadow-lg hover:shadow-xl transform hover:scale-105">
+                    <i data-lucide="download" class="w-6 h-6"></i>
+                    Descargar archivo
+                </button>
+            </form>
+            
+            <!-- Mensaje de expiración -->
+            <p id="expiry-info" class="hidden text-sm text-center text-gray-300 dark:text-gray-300 light:text-gray-500"></p>
+
+            <!-- Mensaje de Error -->
+            <div id="download-error-message" class="hidden bg-red-500/50 text-white p-3 rounded-lg text-center"></div>
+        </div>
+    </template>
+
+    <!-- Template para login -->
+    <template id="login-view-template">
+        <div class="w-full max-w-md glass-container p-8 animate-in slide-in-from-top-4 duration-500">
+            <h2 class="text-2xl font-bold text-center mb-6 dark:text-white light:text-gray-800">Iniciar Sesión</h2>
+            
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2 dark:text-gray-300 light:text-gray-700">Email o Usuario</label>
+                    <input 
+                        type="text" 
+                        id="login-email-username" 
+                        required
+                        class="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
+                        placeholder="email@ejemplo.com o usuario"
+                    >
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2 dark:text-gray-300 light:text-gray-700">Contraseña</label>
+                    <input 
+                        type="password" 
+                        id="login-password" 
+                        required
+                        class="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
+                        placeholder="Tu contraseña"
+                    >
+                </div>
+
+                <div id="login-error" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm"></div>
+
+                <button 
+                    type="submit"
+                    class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors"
+                >
+                    Iniciar Sesión
+                </button>
+            </form>
+
+            <div class="mt-6 text-center">
+                <p class="text-sm dark:text-gray-400 light:text-gray-600">
+                    ¿No tienes cuenta? 
+                    <a href="#" id="goto-register" class="text-red-500 hover:text-red-400 font-medium">Regístrate aquí</a>
+                </p>
+                <a href="/" class="block mt-3 text-sm text-red-500 hover:text-red-400">
+                    Continuar sin cuenta
+                </a>
+            </div>
+        </div>
+    </template>
+
+    <!-- Template para registro -->
+    <template id="register-view-template">
+        <div class="w-full max-w-md glass-container p-8 animate-in slide-in-from-top-4 duration-500">
+            <h2 class="text-2xl font-bold text-center mb-6 dark:text-white light:text-gray-800">Crear Cuenta</h2>
+            
+            <form id="register-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2 dark:text-gray-300 light:text-gray-700">Email</label>
+                    <input 
+                        type="email" 
+                        id="register-email" 
+                        required
+                        pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
+                        title="Ingresa un email válido (ejemplo: correo@dominio.com)"
+                        class="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
+                        placeholder="email@ejemplo.com"
+                    >
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-2 dark:text-gray-300 light:text-gray-700">Usuario</label>
+                    <input 
+                        type="text" 
+                        id="register-username" 
+                        required
+                        minlength="3"
+                        class="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
+                        placeholder="nombreusuario"
+                    >
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2 dark:text-gray-300 light:text-gray-700">Contraseña</label>
+                    <input 
+                        type="password" 
+                        id="register-password" 
+                        required
+                        minlength="8"
+                        class="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
+                        placeholder="Mínimo 8 caracteres"
+                    >
+                </div>
+
+                <div id="register-error" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm"></div>
+
+                <button 
+                    type="submit"
+                    class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors"
+                >
+                    Crear Cuenta
+                </button>
+            </form>
+
+            <div class="mt-6 text-center">
+                <p class="text-sm dark:text-gray-400 light:text-gray-600">
+                    ¿Ya tienes cuenta? 
+                    <a href="#" id="goto-login" class="text-red-500 hover:text-red-400 font-medium">Inicia sesión aquí</a>
+                </p>
+            </div>
+        </div>
+    </template>
+
+    <!-- Template para dashboard del usuario -->
+    <template id="dashboard-view-template">
+        <div class="w-full max-w-6xl glass-container p-8 animate-in slide-in-from-top-4 duration-500 space-y-8">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold dark:text-white light:text-gray-800">Mi Dashboard</h2>
+                    <p class="text-sm dark:text-gray-400 light:text-gray-600 mt-1">
+                        Bienvenido, <span id="dashboard-username" class="font-medium text-red-500"></span>
+                    </p>
+                    <p class="text-xs dark:text-gray-500 light:text-gray-500 mt-2">Aquí encontrarás todos tus archivos y su actividad.</p>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <button 
+                        id="open-settings-btn"
+                        class="btn-secondary"
+                    >
+                        <i data-lucide="settings" style="width: 16px; height: 16px;"></i>
+                        Configuración
+                    </button>
+                    <button 
+                        id="goto-upload-from-dashboard"
+                        class="btn-secondary"
+                    >
+                        <i data-lucide="upload" style="width: 16px; height: 16px;"></i>
+                        Subir Archivo
+                    </button>
+                </div>
+            </div>
+
+            <!-- Resumen rápido -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="p-4 bg-white/5 dark:bg-slate-800/30 light:bg-gray-100/60 rounded-lg border border-gray-300 dark:border-slate-700">
+                    <p class="text-xs uppercase tracking-wide text-gray-400">Archivos subidos</p>
+                    <p id="dashboard-file-count" class="text-2xl font-semibold mt-2 dark:text-white light:text-gray-800">0</p>
+                </div>
+                <div class="p-4 bg-white/5 dark:bg-slate-800/30 light:bg-gray-100/60 rounded-lg border border-gray-300 dark:border-slate-700">
+                    <p class="text-xs uppercase tracking-wide text-gray-400">Descargas totales</p>
+                    <p id="dashboard-total-downloads" class="text-2xl font-semibold mt-2 dark:text-white light:text-gray-800">0</p>
+                </div>
+                <div class="p-4 bg-white/5 dark:bg-slate-800/30 light:bg-gray-100/60 rounded-lg border border-gray-300 dark:border-slate-700">
+                    <p class="text-xs uppercase tracking-wide text-gray-400">Archivo más reciente</p>
+                    <p id="dashboard-latest-file" class="text-sm mt-2 dark:text-white light:text-gray-800">Sin archivos</p>
+                </div>
+            </div>
+
+            <!-- Lista de archivos -->
+            <div>
+                <h3 class="text-lg font-semibold mb-4 dark:text-white light:text-gray-800">Mis Archivos</h3>
+                <div id="user-files-list" class="space-y-3">
+                    <p class="text-center text-gray-500 py-8">Cargando archivos...</p>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Template para vista de configuración -->
+    <template id="settings-view-template">
+        <div class="w-full max-w-4xl glass-container p-8 animate-in slide-in-from-top-4 duration-500 space-y-8">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold dark:text-white light:text-gray-800">Configuración</h2>
+                    <p class="text-sm dark:text-gray-400 light:text-gray-600 mt-1">Actualiza tu contraseña o elimina tu cuenta.</p>
+                </div>
+                <button 
+                    id="back-to-dashboard"
+                    class="btn-outline"
+                >
+                    <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
+                    Volver al dashboard
+                </button>
+            </div>
+
+            <div class="p-6 bg-white/5 dark:bg-slate-800/30 light:bg-gray-100/50 rounded-lg border border-gray-300 dark:border-slate-700">
+                <h3 class="text-lg font-semibold mb-4 dark:text-white light:text-gray-800">Cambiar contraseña</h3>
+                <form id="change-password-form" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <input 
+                        type="password" 
+                        id="current-password" 
+                        placeholder="Contraseña actual"
+                        class="px-4 py-2 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
+                        required
+                    >
+                    <input 
+                        type="password" 
+                        id="new-password" 
+                        placeholder="Nueva contraseña"
+                        minlength="8"
+                        class="px-4 py-2 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
+                        required
+                    >
+                    <button 
+                        type="submit"
+                        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                    >
+                        Actualizar
+                    </button>
+                </form>
+                <div id="password-change-message" class="hidden mt-3 p-3 rounded-lg text-sm"></div>
+            </div>
+
+            <div class="p-6 bg-red-500/10 dark:bg-red-900/20 light:bg-red-50 rounded-lg border border-red-500/30">
+                <h3 class="text-lg font-semibold mb-2 text-red-500 dark:text-red-400">Zona peligrosa</h3>
+                <p class="text-sm text-gray-400 dark:text-gray-400 light:text-gray-600 mb-4">
+                    Una vez eliminada tu cuenta, no hay vuelta atrás. Todos tus archivos serán eliminados permanentemente.
+                </p>
+                <button 
+                    id="delete-account-btn"
+                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                >
+                    <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+                    Eliminar mi cuenta
+                </button>
+            </div>
+        </div>
+    </template>
+
+    <!-- Template para modal de confirmación de eliminación de cuenta -->
+    <template id="delete-account-modal-template">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" id="delete-modal-overlay">
+            <div class="w-full max-w-md glass-container p-6 m-4 animate-in slide-in-from-top-4 duration-500">
+                <h3 class="text-xl font-bold text-red-500 mb-4">⚠️ Confirmar Eliminación de Cuenta</h3>
+                <p class="text-sm dark:text-gray-300 light:text-gray-700 mb-4">
+                    Esta acción es <strong>irreversible</strong>. Se eliminarán:
+                </p>
+                <ul class="text-sm dark:text-gray-400 light:text-gray-600 mb-4 list-disc list-inside space-y-1">
+                    <li>Tu cuenta de usuario</li>
+                    <li>Todos tus archivos subidos</li>
+                    <li>Todos los enlaces de descarga</li>
+                </ul>
+                <p class="text-sm dark:text-gray-300 light:text-gray-700 mb-4">
+                    Por favor, ingresa tu contraseña para confirmar:
+                </p>
+                <form id="delete-account-form" class="space-y-4">
+                    <input 
+                        type="password" 
+                        id="delete-password" 
+                        placeholder="Tu contraseña"
+                        class="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
+                        required
+                    >
+                    <div id="delete-error" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm"></div>
+                    <div class="flex gap-3">
+                        <button 
+                            type="button"
+                            id="cancel-delete-btn"
+                            class="btn-outline flex-1 justify-center"
+                        >
+                            Cancelar
+                        </button>
+                        <button 
+                            type="submit"
+                            class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                        >
+                            Sí, eliminar mi cuenta
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </template>
+    
+    <!-- Template para item de progreso -->
+    <template id="upload-item-template">
+        <div class="bg-white/10 dark:bg-white/10 light:bg-blue-50 p-6 rounded-xl space-y-4" role="progressbar">
+            <div class="flex justify-between items-center">
+                <span class="file-name text-lg font-semibold text-white dark:text-white light:text-gray-800 truncate max-w-[300px]">file.name</span>
+                <span class="status-text text-base text-gray-200 dark:text-gray-200 light:text-gray-600 font-medium">Subiendo...</span>
+            </div>
+            <progress class="w-full h-3 rounded-lg" value="0" max="100"></progress>
+            <div class="result-link hidden">
+                <input type="text" readonly name="download-url" class="download-link-input">
+                <button class="copy-button copy-link-button">
+                    <i data-lucide="copy" class="icon"></i>
+                    Copiar enlace
+                </button>
+            </div>
+            <div class="error-message hidden bg-red-500/50 text-white p-3 rounded-lg text-center text-sm"></div>
+        </div>
+    </template>
+
+    <!-- Script principal de la aplicación -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const appContainer = document.getElementById('app-container');
+            const notificationWrapper = document.getElementById('global-notification');
+            const notificationContent = document.getElementById('global-notification-content');
+            let notificationTimeoutId;
+            const MAX_EXPIRATION_DAYS = 15;
+
+            function showNotification(message, type = 'info', duration = 4000) {
+                if (!notificationWrapper || !notificationContent || !message) return;
+
+                const baseClasses = [
+                    'max-w-lg', 'w-full', 'px-4', 'py-3', 'rounded-lg',
+                    'shadow-lg', 'text-sm', 'font-medium', 'text-white', 'text-center'
+                ];
+                const palette = {
+                    success: 'bg-green-600/90',
+                    error: 'bg-red-600/90',
+                    info: 'bg-slate-800/90'
+                };
+
+                notificationContent.className = `${baseClasses.join(' ')} ${palette[type] || palette.info}`;
+                notificationContent.textContent = message;
+                notificationWrapper.classList.remove('hidden');
+
+                clearTimeout(notificationTimeoutId);
+                if (duration > 0) {
+                    notificationTimeoutId = setTimeout(() => {
+                        notificationWrapper.classList.add('hidden');
+                    }, duration);
+                }
+            }
+
+            const homeLinkEl = document.getElementById('home-link');
+            const runtimeConfig = window.CONFIG || {};
+
+            const stripTrailingSlash = (value) => {
+                if (!value) return value;
+                return value.replace(/\/+$/, '');
+            };
+
+            const isLocalHostname = (hostname) => {
+                if (!hostname) return false;
+                const localPattern = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/;
+                return localPattern.test(hostname) || hostname.endsWith('.local') || hostname.endsWith('.lan');
+            };
+
+            const resolveHomeUrl = () => {
+                const { protocol, hostname, port } = window.location;
+                const defaultOrigin = `${protocol}//${hostname}${port ? `:${port}` : ''}`;
+
+                if (isLocalHostname(hostname)) {
+                    return `${stripTrailingSlash(runtimeConfig.LOCAL_ORIGIN) || defaultOrigin}/`;
+                }
+
+                if (runtimeConfig.PUBLIC_ORIGIN) {
+                    return `${stripTrailingSlash(runtimeConfig.PUBLIC_ORIGIN)}/`;
+                }
+
+                return `${defaultOrigin}/`;
+            };
+
+            if (homeLinkEl) {
+                const homeUrl = resolveHomeUrl();
+                homeLinkEl.setAttribute('href', homeUrl);
+                homeLinkEl.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    window.location.href = homeUrl;
+                });
+            }
+
+            const triggerDownloadFallback = (fileId, password) => {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/api/download/${fileId}`;
+                form.style.display = 'none';
+                
+                if (password) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'password';
+                    input.value = password;
+                    form.appendChild(input);
+                }
+                
+                document.body.appendChild(form);
+                form.submit();
+                setTimeout(() => form.remove(), 2000);
+            };
+
+            // --- Router simple ---
+            const path = window.location.pathname;
+            if (path.startsWith('/share/')) {
+                const fileId = path.split('/')[2];
+                loadDownloadView(fileId);
+            } else {
+                loadUploadView();
+            }
+
+            // --- Cargar Vistas ---
+            function loadUploadView() {
+                const template = document.getElementById('upload-view-template').content.cloneNode(true);
+                appContainer.innerHTML = '';
+                appContainer.appendChild(template);
+                initUploadListeners();
+            }
+
+            function loadDownloadView(fileId) {
+                const template = document.getElementById('download-view-template').content.cloneNode(true);
+                appContainer.innerHTML = '';
+                appContainer.appendChild(template);
+                initDownloadListeners(fileId);
+            }
+
+            // --- Lógica de Subida (Upload) ---
+            function initUploadListeners() {
+                const dropZone = document.getElementById('drop-zone');
+                const fileInput = document.getElementById('file-input');
+                const dropOverlay = document.getElementById('drop-overlay');
+                const uploadForm = document.getElementById('upload-form');
+                const uploadOptions = document.getElementById('upload-options');
+                const startUploadBtn = document.getElementById('start-upload');
+                const clearSelectionBtn = document.getElementById('clear-selection');
+                const expiresInput = document.getElementById('expires');
+                const successBanner = document.getElementById('upload-success-banner');
+                const successUrlInput = document.getElementById('upload-success-url');
+                const successCopyBtn = document.getElementById('upload-success-copy');
+                let selectedFile = null;
+
+                if (!dropZone) return;
+
+                function hideSuccessBanner() {
+                    if (successBanner) {
+                        successBanner.classList.add('hidden');
+                    }
+                    if (successUrlInput) {
+                        successUrlInput.value = '';
+                        successUrlInput.removeAttribute('value');
+                    }
+                    if (successCopyBtn) {
+                        successCopyBtn.innerHTML = '<i data-lucide="copy" class="icon"></i> Copiar enlace';
+                        if (typeof lucide !== 'undefined') {
+                            lucide.createIcons();
+                        }
+                    }
+                }
+
+                hideSuccessBanner();
+
+                if (successCopyBtn && successUrlInput) {
+                    successCopyBtn.addEventListener('click', () => {
+                        const url = successUrlInput.value.trim();
+                        if (!url) {
+                            showNotification('No hay enlace disponible para copiar.', 'info', 2500);
+                            return;
+                        }
+                        if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+                            showNotification('La API del portapapeles no esta disponible.', 'error', 2500);
+                            return;
+                        }
+                        navigator.clipboard.writeText(url).then(() => {
+                            successCopyBtn.innerHTML = '<i data-lucide="check" class="icon"></i> Copiado';
+                            lucide.createIcons();
+                            setTimeout(() => {
+                                successCopyBtn.innerHTML = '<i data-lucide="copy" class="icon"></i> Copiar enlace';
+                                lucide.createIcons();
+                            }, 2000);
+                            showNotification('Enlace copiado al portapapeles.', 'success', 2500);
+                        }).catch(() => {
+                            showNotification('No se pudo copiar el enlace.', 'error', 2500);
+                        });
+                    });
+                }
+
+                if (uploadForm && startUploadBtn) {
+                    uploadForm.addEventListener('submit', (event) => {
+                        event.preventDefault(); // Evitar recarga al presionar Enter
+
+                        if (!selectedFile || startUploadBtn.disabled) {
+                            showNotification('Selecciona un archivo antes de subir.', 'info', 2500);
+                            return;
+                        }
+
+                        startUploadBtn.click();
+                    });
+                }
+
+                if (expiresInput) {
+                    expiresInput.addEventListener('input', () => {
+                        const rawDigits = expiresInput.value.replace(/\D+/g, '');
+                        if (rawDigits === '') {
+                            expiresInput.value = '';
+                            return;
+                        }
+                        let numericValue = parseInt(rawDigits, 10);
+                        if (Number.isNaN(numericValue)) {
+                            expiresInput.value = '';
+                            return;
+                        }
+                        if (numericValue > MAX_EXPIRATION_DAYS) {
+                            numericValue = MAX_EXPIRATION_DAYS;
+                            showNotification(`La expiración máxima es de ${MAX_EXPIRATION_DAYS} días.`, 'info', 2500);
+                        }
+                        expiresInput.value = String(numericValue);
+                    });
+                }
+                if (clearSelectionBtn) {
+                    clearSelectionBtn.disabled = true;
+                    clearSelectionBtn.classList.add("opacity-50", "pointer-events-none");
+                    clearSelectionBtn.addEventListener("click", () => {
+                        resetDropZone();
+                    });
+                }
+
+                // Prevenir comportamientos por defecto
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, preventDefaults, false);
+                    document.body.addEventListener(eventName, preventDefaults, false);
+                });
+
+                // Resaltar al arrastrar
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, () => dropOverlay.style.opacity = '1', false);
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, () => dropOverlay.style.opacity = '0', false);
+                });
+
+                // Manejar archivos soltados
+                dropZone.addEventListener('drop', (e) => {
+                    const dt = e.dataTransfer;
+                    const files = dt.files;
+                    if (files.length) {
+                        fileInput.files = files; // Asignar al input
+                        showUploadOptions(files[0]);
+                    }
+                }, false);
+
+                // Manejar selección de input
+                fileInput.addEventListener('change', () => {
+                    if (fileInput.files.length > 0) {
+                        showUploadOptions(fileInput.files[0]);
+                    }
+                });
+
+                // Mostrar opciones cuando se selecciona un archivo
+                function showUploadOptions(file) {
+                    selectedFile = file;
+                    hideSuccessBanner();
+                    
+                    // Actualizar la zona de drop para mostrar el archivo seleccionado
+                    const dropIcon = dropZone.querySelector('[data-lucide="upload-cloud"], [data-lucide="file-check"]');
+                    const mainText = dropZone.querySelector('#drop-main-text');
+                    const subText = dropZone.querySelector('#drop-sub-text');
+                    
+                    if (dropIcon) {
+                        dropIcon.setAttribute('data-lucide', 'file-check');
+                    }
+                    mainText.textContent = `Archivo seleccionado: ${file.name}`;
+                    subText.textContent = `${formatBytes(file.size)} • Haz clic para cambiar`;
+                    
+                    // Mostrar las opciones
+                    uploadOptions.classList.remove('hidden');
+                    if (clearSelectionBtn) {
+                        clearSelectionBtn.disabled = false;
+                        clearSelectionBtn.classList.remove("opacity-50", "pointer-events-none");
+                    }
+                    
+                    // Refrescar iconos
+                    lucide.createIcons();
+                    
+                    // Scroll suave hacia las opciones
+                    uploadOptions.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+
+                // Botón de iniciar subida
+                startUploadBtn.addEventListener('click', async () => {
+                    if (!selectedFile) return;
+
+                    const originalBtnContent = startUploadBtn.innerHTML;
+                    const mainText = dropZone.querySelector('#drop-main-text');
+                    const subText = dropZone.querySelector('#drop-sub-text');
+                    uploadOptions.classList.add('hidden');
+                    dropZone.classList.add('opacity-60', 'pointer-events-none');
+                    startUploadBtn.disabled = true;
+                    startUploadBtn.innerHTML = '<i data-lucide="loader-2" class="icon animate-spin"></i> Subiendo...';
+                    if (mainText && subText) {
+                        mainText.textContent = `Subiendo: ${selectedFile.name}`;
+                        subText.textContent = 'No cierres esta pestaña hasta finalizar.';
+                    }
+                    lucide.createIcons();
+
+                    const currentFileName = selectedFile ? selectedFile.name : '';
+                    let uploadSuccess = false;
+                    let lastUploadResult = null;
+
+                    try {
+                        const results = await handleFiles([selectedFile]);
+                        if (Array.isArray(results) && results.length > 0) {
+                            lastUploadResult = results[0];
+                        }
+                        uploadSuccess = true;
+                    } catch (err) {
+                        console.error('Error global en subida:', err);
+                    } finally {
+                        if (uploadSuccess && lastUploadResult && lastUploadResult.downloadUrl) {
+                            showNotification('Archivo listo! Encuentra el enlace generado debajo.', 'success', 4000);
+                        }
+                        startUploadBtn.disabled = false;
+                        startUploadBtn.innerHTML = originalBtnContent;
+                        resetDropZone(uploadSuccess ? { state: 'success', fileName: currentFileName, downloadUrl: lastUploadResult?.downloadUrl } : { state: 'default' });
+                    }
+                });
+
+                // Función para resetear la zona de drop
+
+function resetDropZone(options = {}) {
+    const { state = 'default', fileName, downloadUrl } = options;
+    const dropIcon = dropZone.querySelector('[data-lucide="file-check"], [data-lucide="upload-cloud"]');
+    const mainText = dropZone.querySelector('#drop-main-text');
+    const subText = dropZone.querySelector('#drop-sub-text');
+
+    dropZone.classList.remove('opacity-60', 'pointer-events-none');
+    uploadOptions.classList.add('hidden');
+    selectedFile = null;
+    fileInput.value = '';
+
+    if (dropIcon) {
+        dropIcon.setAttribute('data-lucide', 'upload-cloud');
+    }
+
+    if (state === 'success') {
+        if (mainText) {
+            mainText.textContent = 'Archivo subido correctamente';
+        }
+        if (subText) {
+            subText.textContent = downloadUrl
+                ? 'Comparte el enlace generado a continuación.'
+                : 'Copia el enlace generado abajo o selecciona un nuevo archivo.';
+        }
+        if (successBanner && successUrlInput && downloadUrl) {
+            successBanner.classList.remove('hidden');
+            successUrlInput.value = downloadUrl;
+            successUrlInput.setAttribute('value', downloadUrl);
+        } else {
+            hideSuccessBanner();
+        }
+    } else {
+        if (mainText) {
+            mainText.textContent = 'Arrastra tu archivo aquí';
+        }
+        if (subText) {
+            subText.textContent = 'o haz clic para seleccionar';
+        }
+        hideSuccessBanner();
+    }
+    if (clearSelectionBtn) {
+        clearSelectionBtn.disabled = true;
+        clearSelectionBtn.classList.add('opacity-50', 'pointer-events-none');
+    }
+
+    lucide.createIcons();
+}
+
+            }
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            async function handleFiles(files) {
+                return Promise.all([...files].map(file => uploadFile(file)));
+            }
+
+            async function uploadFile(file) {
+                const uploadList = document.getElementById('upload-list');
+                const template = document.getElementById('upload-item-template').content.cloneNode(true);
+                const item = template.querySelector('div[role="progressbar"]');
+                const fileNameEl = item.querySelector('.file-name');
+                const statusTextEl = item.querySelector('.status-text');
+                const progressEl = item.querySelector('progress');
+                const resultLinkEl = item.querySelector('.result-link');
+                const resultInput = item.querySelector('.result-link input');
+                const copyButton = item.querySelector('.copy-button');
+                const errorEl = item.querySelector('.error-message');
+
+                fileNameEl.textContent = file.name;
+                uploadList.prepend(item);
+                
+                // Scroll hacia el elemento de progreso
+                setTimeout(() => {
+                    item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+                
+                // --- CHUNKED UPLOAD (30MB, paralelo) ---
+                const CHUNK_SIZE = 30 * 1024 * 1024; // 30MB
+                const CONCURRENCY = 4;
+
+                const passwordInput = document.getElementById('password');
+                const expiresInput = document.getElementById('expires');
+                const maxDownloadsInput = document.getElementById('maxDownloads');
+
+                const password = passwordInput ? passwordInput.value : '';
+                const expiresInputValue = expiresInput ? expiresInput.value.trim() : '';
+                const maxDownloads = maxDownloadsInput ? maxDownloadsInput.value : '';
+
+                let expiresDays = null;
+                if (expiresInputValue !== '') {
+                    const parsedExpires = parseInt(expiresInputValue, 10);
+                    if (Number.isNaN(parsedExpires)) {
+                        errorEl.textContent = 'La expiración debe ser un número entero.';
+                        errorEl.classList.remove('hidden');
+                        return;
+                    }
+                    expiresDays = Math.max(0, Math.min(parsedExpires, MAX_EXPIRATION_DAYS));
+                }
+
+                const expiresHours = (expiresDays !== null && expiresDays > 0) ? expiresDays * 24 : null;
+
+                try {
+                    console.log('🚀 Iniciando subida de archivo:', file.name, 'Tamaño:', file.size);
+                    statusTextEl.textContent = 'Inicializando... 0%';
+                    progressEl.value = 0;
+                    progressEl.classList.remove('hidden');
+                    // 1) init
+                    const initRes = await fetch('/api/upload/init', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            fileName: file.name,
+                            size: file.size,
+                            mimeType: file.type || 'application/octet-stream',
+                            expires: expiresHours,
+                            maxDownloads: maxDownloads || null,
+                            password: password || null
+                        })
+                    });
+                    const initJson = await initRes.json();
+                    console.log('📋 Init response:', initJson);
+                    if (!initRes.ok) throw new Error(initJson.message || 'No se pudo iniciar la subida.');
+
+                    const uploadId = initJson.uploadId;
+                    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+                    let uploadedBytes = 0;
+                    let completedChunks = 0;
+                    console.log(`📦 Total chunks: ${totalChunks}, Chunk size: ${CHUNK_SIZE / 1024 / 1024}MB`);
+
+                    // 2) subir chunks en paralelo
+                    const uploadChunk = async (i) => {
+                        const start = i * CHUNK_SIZE;
+                        const end = Math.min(start + CHUNK_SIZE, file.size);
+                        const blob = file.slice(start, end);
+                        console.log(`⬆️ Subiendo chunk ${i + 1} de ${totalChunks} (${Math.round((end - start) / 1024 / 1024)}MB)`);
+                        const res = await fetch(`/api/upload/chunk?uploadId=${encodeURIComponent(uploadId)}&index=${i}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/octet-stream' },
+                            body: blob
+                        });
+                        if (!res.ok) {
+                            const err = await res.json().catch(() => ({}));
+                            throw new Error(err.message || `Fallo subiendo chunk ${i}`);
+                        }
+                        uploadedBytes += (end - start);
+                        completedChunks += 1;
+                        const percent = (uploadedBytes / file.size) * 100;
+                        progressEl.value = percent;
+                        statusTextEl.textContent = `${Math.round(percent)}% • Chunk ${completedChunks}/${totalChunks}`;
+                        console.log(`✅ Chunk ${i + 1} completado. Progreso: ${Math.round(percent)}%`);
+                    };
+
+                    let cursor = 0;
+                    const workers = new Array(Math.min(CONCURRENCY, totalChunks)).fill(0).map(async () => {
+                        while (cursor < totalChunks) {
+                            const currentIndex = cursor++;
+                            await uploadChunk(currentIndex);
+                        }
+                    });
+                    await Promise.all(workers);
+
+                    console.log('✨ Todos los chunks subidos, finalizando...');
+                    // 3) complete
+                    statusTextEl.textContent = 'Finalizando...';
+                    const compRes = await fetch('/api/upload/complete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ uploadId })
+                    });
+                    const compJson = await compRes.json();
+                    console.log('🎉 Upload completado:', compJson);
+                    if (!compRes.ok) throw new Error(compJson.message || 'No se pudo finalizar la subida.');
+
+                    statusTextEl.textContent = '100% - Completado!';
+                    statusTextEl.classList.add('text-green-400');
+                    resultLinkEl.classList.remove('hidden');
+                    resultInput.value = compJson.downloadUrl;
+                    resultInput.setAttribute('value', compJson.downloadUrl);
+                    setTimeout(() => {
+                        try {
+                            resultInput.focus({ preventScroll: true });
+                            resultInput.select();
+                        } catch (focusErr) {
+                            console.debug('No se pudo enfocar el campo del enlace:', focusErr);
+                        }
+                    }, 100);
+
+                    copyButton.addEventListener('click', () => {
+                        if (!compJson.downloadUrl) {
+                            showNotification('No hay enlace disponible para copiar.', 'info', 2500);
+                            return;
+                        }
+                        if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+                            showNotification('La API del portapapeles no esta disponible.', 'error', 2500);
+                            return;
+                        }
+                        navigator.clipboard.writeText(compJson.downloadUrl).then(() => {
+                            copyButton.innerHTML = '<i data-lucide="check" class="icon"></i> Copiado';
+                            lucide.createIcons();
+                            setTimeout(() => {
+                                copyButton.innerHTML = '<i data-lucide="copy" class="icon"></i> Copiar enlace';
+                                lucide.createIcons();
+                            }, 2000);
+                            showNotification('Enlace copiado al portapapeles.', 'success', 2500);
+                        }).catch(() => {
+                            showNotification('No se pudo copiar el enlace.', 'error', 2500);
+                        });
+                    });
+
+                    return compJson;
+
+                } catch (err) {
+                    console.error('❌ Error durante la subida:', err);
+                    statusTextEl.textContent = 'Error';
+                    statusTextEl.classList.add('text-red-400');
+                    errorEl.textContent = err.message || 'Error desconocido';
+                    errorEl.classList.remove('hidden');
+                    throw err;
+                } finally {
+                    lucide.createIcons();
+                }
+            }
+
+            // --- Lógica de Descarga (Download) ---
+            async function initDownloadListeners(fileId) {
+                const form = document.getElementById('download-form');
+                const passwordGroup = document.getElementById('password-group');
+                const passwordInput = document.getElementById('download-password');
+                const fileNameEl = document.getElementById('file-name');
+                const fileSizeEl = document.getElementById('file-size');
+                const errorEl = document.getElementById('download-error-message');
+                const expiryEl = document.getElementById('expiry-info');
+                const downloadBtn = document.getElementById('download-button');
+                
+                const clearDownloadError = () => {
+                    if (errorEl) {
+                        errorEl.textContent = '';
+                        errorEl.classList.add('hidden');
+                    }
+                };
+                const renderDownloadError = (message) => {
+                    if (errorEl) {
+                        errorEl.textContent = message;
+                        errorEl.classList.remove('hidden');
+                    }
+                };
+
+                try {
+                    // 1. Obtener metadata
+                    const metaRes = await fetch(`/api/meta/${fileId}`);
+                    if (!metaRes.ok) {
+                        const errData = await metaRes.json().catch(() => ({ message: 'Error al obtener metadatos.' }));
+                        throw new Error(errData.message);
+                    }
+                    const meta = await metaRes.json();
+
+                    clearDownloadError();
+                    
+                    fileNameEl.textContent = meta.fileName;
+                    fileSizeEl.textContent = formatBytes(meta.size);
+
+                    let expiryText = [];
+                    if (meta.expiresAt) {
+                         expiryText.push(`Expira: ${new Date(meta.expiresAt).toLocaleString()}`);
+                    }
+                    if (meta.downloadsLeft) {
+                        expiryText.push(`Descargas restantes: ${meta.downloadsLeft}`);
+                    }
+                    const expiryMessage = expiryText.join(' | ');
+                    expiryEl.textContent = expiryMessage;
+                    if (expiryMessage.length > 0) {
+                        expiryEl.classList.remove('hidden');
+                    } else {
+                        expiryEl.classList.add('hidden');
+                    }
+
+                    // 2. Configurar el manejador de descargas
+                    if (meta.requiresPassword) {
+                        // LÓGICA ANTERIOR PARA ARCHIVOS CON CONTRASEÑA
+                        passwordGroup.classList.remove('hidden');
+                        if (passwordInput) {
+                            passwordInput.required = true;
+                            passwordInput.setAttribute('name', 'password');
+                        }
+                        
+                        form.addEventListener('submit', async (e) => {
+                            e.preventDefault();
+                            clearDownloadError();
+                            downloadBtn.disabled = true;
+                            downloadBtn.innerHTML = '<i data-lucide="loader-2" class="icon animate-spin"></i> Procesando...';
+                            lucide.createIcons();
+                            
+                            try {
+                                const payload = { password: passwordInput.value };
+                                const downloadRes = await fetch(`/api/download/${fileId}`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Accept': 'application/json',
+                                        'X-Download-Check': 'true'
+                                    },
+                                    credentials: 'include',
+                                    body: JSON.stringify(payload)
+                                });
+
+                                const validation = await downloadRes.json();
+                                if (!downloadRes.ok || !validation || !validation.ok) {
+                                    throw new Error(validation?.message || 'No se pudo preparar la descarga.');
+                                }
+
+                                triggerDownloadFallback(fileId, passwordInput.value);
+                                showNotification('Descarga iniciada.', 'success', 2500);
+
+                            } catch (err) {
+                                renderDownloadError(err.message);
+                            } finally {
+                                downloadBtn.disabled = false;
+                                downloadBtn.innerHTML = '<i data-lucide="download" class="icon"></i> Descargar archivo';
+                                lucide.createIcons();
+                            }
+                        });
+                    } else {
+                        // Lógica para archivos sin contraseña (validación y descarga POST)
+                        form.addEventListener('submit', async (e) => {
+                            e.preventDefault();
+                            clearDownloadError();
+                            downloadBtn.disabled = true;
+                            downloadBtn.innerHTML = '<i data-lucide="loader-2" class="icon animate-spin"></i> Procesando...';
+                            lucide.createIcons();
+
+                            if (passwordInput) {
+                                passwordInput.required = false;
+                                passwordInput.removeAttribute('name');
+                            }
+
+                            try {
+                                const downloadRes = await fetch(`/api/download/${fileId}`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Accept': 'application/json',
+                                        'X-Download-Check': 'true'
+                                    },
+                                    credentials: 'include',
+                                    body: JSON.stringify({})
+                                });
+
+                                const validation = await downloadRes.json();
+                                if (!downloadRes.ok || !validation || !validation.ok) {
+                                    throw new Error(validation?.message || 'No se pudo preparar la descarga.');
+                                }
+
+                                triggerDownloadFallback(fileId, null);
+                                showNotification('Descarga iniciada.', 'success', 2500);
+
+                            } catch (err) {
+                                renderDownloadError(err.message);
+                            } finally {
+                                downloadBtn.disabled = false;
+                                downloadBtn.innerHTML = '<i data-lucide="download" class="icon"></i> Descargar archivo';
+                                lucide.createIcons();
+                            }
+                        });
+                    }
+                } catch (err) {
+                    renderDownloadError(err.message);
+                    form.classList.add('hidden');
+                }
+            }
+            
+            
+            function formatBytes(bytes, decimals = 2) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const dm = decimals < 0 ? 0 : decimals;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+            }
+
+            function formatTimeSince(timestamp) {
+                if (!timestamp) return 'poco tiempo';
+                const time = typeof timestamp === 'number' ? timestamp : Number(timestamp);
+                const diffMs = Date.now() - time;
+
+                if (Number.isNaN(diffMs) || diffMs < 0) {
+                    return 'instantes';
+                }
+
+                const seconds = Math.floor(diffMs / 1000);
+                if (seconds < 45) return 'instantes';
+
+                const intervals = [
+                    { label: 'año', seconds: 31536000 },
+                    { label: 'mes', seconds: 2592000 },
+                    { label: 'semana', seconds: 604800 },
+                    { label: 'día', seconds: 86400 },
+                    { label: 'hora', seconds: 3600 },
+                    { label: 'minuto', seconds: 60 }
+                ];
+
+                for (const interval of intervals) {
+                    const count = Math.floor(seconds / interval.seconds);
+                    if (count >= 1) {
+                        return `${count} ${interval.label}${count !== 1 ? 's' : ''}`;
+                    }
+                }
+
+                return 'instantes';
+            }
+
+            // --- SISTEMA DE AUTENTICACIÓN ---
+            let currentUser = null;
+
+            // Verificar sesión al cargar
+            checkAuth();
+
+            async function checkAuth() {
+                try {
+                    const hasSessionCookie = document.cookie.split(';').some((cookie) =>
+                        cookie.trim().startsWith('connect.sid=')
+                    );
+
+                    if (!hasSessionCookie) {
+                        currentUser = null;
+                        updateUserMenu();
+                        return;
+                    }
+
+                    const res = await fetch('/api/auth/me', {
+                        credentials: 'include'
+                    });
+                    
+                    if (res.ok) {
+                        const data = await res.json();
+                        currentUser = data.user;
+                        updateUserMenu();
+                    } else {
+                        currentUser = null;
+                        updateUserMenu();
+                    }
+                } catch (err) {
+                    currentUser = null;
+                    updateUserMenu();
+                }
+            }
+
+            function updateUserMenu() {
+                const dropdown = document.getElementById('user-dropdown');
+                
+                if (currentUser) {
+                    // Usuario autenticado - mostrar perfil y opciones
+                    dropdown.innerHTML = `
+                        <div class="user-info">
+                            <div class="user-info-name">${currentUser.username}</div>
+                            <div class="user-info-email">${currentUser.email}</div>
+                        </div>
+                        <a href="#" class="user-dropdown-item" id="menu-dashboard">
+                            <i data-lucide="layout-dashboard" style="width: 16px; height: 16px;"></i>
+                            <span>Mi Dashboard</span>
+                        </a>
+                        <a href="#" class="user-dropdown-item" id="menu-settings">
+                            <i data-lucide="settings" style="width: 16px; height: 16px;"></i>
+                            <span>Configuración</span>
+                        </a>
+                        <div class="user-dropdown-divider"></div>
+                        <a href="#" class="user-dropdown-item" id="menu-logout">
+                            <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
+                            <span>Cerrar Sesión</span>
+                        </a>
+                    `;
+
+                    // Event listeners
+                    document.getElementById('menu-dashboard').addEventListener('click', (e) => {
+                        e.preventDefault();
+                        closeUserMenu();
+                        loadDashboardView();
+                    });
+
+                    document.getElementById('menu-settings').addEventListener('click', (e) => {
+                        e.preventDefault();
+                        closeUserMenu();
+                        loadSettingsView();
+                    });
+
+                    document.getElementById('menu-logout').addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        closeUserMenu();
+                        try {
+                            await fetch('/api/auth/logout', {
+                                method: 'POST',
+                                credentials: 'include'
+                            });
+                            currentUser = null;
+                            updateUserMenu();
+                            loadUploadView();
+                        } catch (err) {
+                            console.error('Error al cerrar sesión:', err);
+                        }
+                    });
+
+                } else {
+                    // Usuario no autenticado - mostrar opciones de login/registro
+                    dropdown.innerHTML = `
+                        <a href="#" class="user-dropdown-item" id="menu-login">
+                            <i data-lucide="log-in" style="width: 16px; height: 16px;"></i>
+                            <span>Iniciar Sesión</span>
+                        </a>
+                        <a href="#" class="user-dropdown-item" id="menu-register">
+                            <i data-lucide="user-plus" style="width: 16px; height: 16px;"></i>
+                            <span>Registrarse</span>
+                        </a>
+                    `;
+
+                    // Event listeners
+                    document.getElementById('menu-login').addEventListener('click', (e) => {
+                        e.preventDefault();
+                        closeUserMenu();
+                        loadLoginView();
+                    });
+
+                    document.getElementById('menu-register').addEventListener('click', (e) => {
+                        e.preventDefault();
+                        closeUserMenu();
+                        loadRegisterView();
+                    });
+                }
+
+                lucide.createIcons();
+            }
+
+            // Toggle del menú desplegable
+            const userMenuBtn = document.getElementById('user-menu-btn');
+            const userDropdown = document.getElementById('user-dropdown');
+
+            userMenuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userDropdown.classList.toggle('show');
+            });
+
+            // Cerrar menú al hacer click fuera
+            document.addEventListener('click', (e) => {
+                if (!userDropdown.contains(e.target) && e.target !== userMenuBtn) {
+                    userDropdown.classList.remove('show');
+                }
+            });
+
+            function closeUserMenu() {
+                userDropdown.classList.remove('show');
+            }
+
+            // --- Vistas de autenticación ---
+            function loadLoginView() {
+                const template = document.getElementById('login-view-template').content.cloneNode(true);
+                appContainer.innerHTML = '';
+                appContainer.appendChild(template);
+
+                const form = document.getElementById('login-form');
+                const errorEl = document.getElementById('login-error');
+
+                document.getElementById('goto-register').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    loadRegisterView();
+                });
+
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    errorEl.classList.add('hidden');
+
+                    const emailOrUsername = document.getElementById('login-email-username').value;
+                    const password = document.getElementById('login-password').value;
+
+                    try {
+                        const res = await fetch('/api/auth/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ emailOrUsername, password })
+                        });
+
+                        const data = await res.json();
+
+                        if (res.ok) {
+                            currentUser = data.user;
+                            updateUserMenu();
+                            loadDashboardView();
+                        } else {
+                            errorEl.textContent = data.message;
+                            errorEl.classList.remove('hidden');
+                        }
+                    } catch (err) {
+                        errorEl.textContent = 'Error de conexión';
+                        errorEl.classList.remove('hidden');
+                    }
+                });
+
+                lucide.createIcons();
+            }
+
+            function loadRegisterView() {
+                const template = document.getElementById('register-view-template').content.cloneNode(true);
+                appContainer.innerHTML = '';
+                appContainer.appendChild(template);
+
+                const form = document.getElementById('register-form');
+                const errorEl = document.getElementById('register-error');
+
+                document.getElementById('goto-login').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    loadLoginView();
+                });
+
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    errorEl.classList.add('hidden');
+
+                    const email = document.getElementById('register-email').value;
+                    const username = document.getElementById('register-username').value;
+                    const password = document.getElementById('register-password').value;
+
+                    // Validar formato de email en frontend
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(email)) {
+                        errorEl.textContent = 'Por favor ingresa un email válido (ejemplo: correo@dominio.com)';
+                        errorEl.classList.remove('hidden');
+                        return;
+                    }
+
+                    try {
+                        const res = await fetch('/api/auth/register', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ email, username, password })
+                        });
+
+                        const data = await res.json();
+
+                        if (res.ok) {
+                            currentUser = data.user;
+                            updateUserMenu();
+                            loadDashboardView();
+                        } else {
+                            errorEl.textContent = data.message;
+                            errorEl.classList.remove('hidden');
+                        }
+                    } catch (err) {
+                        errorEl.textContent = 'Error de conexión';
+                        errorEl.classList.remove('hidden');
+                    }
+                });
+
+                lucide.createIcons();
+            }
+
+            async function loadDashboardView() {
+                const template = document.getElementById('dashboard-view-template').content.cloneNode(true);
+                appContainer.innerHTML = '';
+                appContainer.appendChild(template);
+
+                document.getElementById('dashboard-username').textContent = currentUser.username;
+
+                document.getElementById('goto-upload-from-dashboard').addEventListener('click', () => {
+                    loadUploadView();
+                });
+
+                document.getElementById('open-settings-btn').addEventListener('click', () => {
+                    loadSettingsView();
+                });
+
+                // Cargar archivos del usuario y estadísticas
+                await loadUserFiles();
+
+                lucide.createIcons();
+            }
+
+            function loadSettingsView() {
+                const template = document.getElementById('settings-view-template').content.cloneNode(true);
+                appContainer.innerHTML = '';
+                appContainer.appendChild(template);
+
+                document.getElementById('back-to-dashboard').addEventListener('click', () => {
+                    loadDashboardView();
+                });
+
+                const passwordForm = document.getElementById('change-password-form');
+                const passwordMessage = document.getElementById('password-change-message');
+
+                passwordForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    passwordMessage.classList.add('hidden');
+
+                    const currentPassword = document.getElementById('current-password').value;
+                    const newPassword = document.getElementById('new-password').value;
+
+                    try {
+                        const res = await fetch('/api/user/change-password', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ currentPassword, newPassword })
+                        });
+
+                        const data = await res.json();
+
+                        passwordMessage.textContent = data.message;
+                        passwordMessage.className = res.ok 
+                            ? 'mt-3 p-3 rounded-lg text-sm bg-green-500/20 border border-green-500 text-green-400'
+                            : 'mt-3 p-3 rounded-lg text-sm bg-red-500/20 border border-red-500 text-red-400';
+                        passwordMessage.classList.remove('hidden');
+
+                        if (res.ok) {
+                            passwordForm.reset();
+                        }
+                    } catch (err) {
+                        passwordMessage.textContent = 'Error de conexión';
+                        passwordMessage.className = 'mt-3 p-3 rounded-lg text-sm bg-red-500/20 border border-red-500 text-red-400';
+                        passwordMessage.classList.remove('hidden');
+                    }
+                });
+
+                document.getElementById('delete-account-btn').addEventListener('click', () => {
+                    showDeleteAccountModal();
+                });
+
+                lucide.createIcons();
+            }
+
+            function showDeleteAccountModal() {
+                const modalTemplate = document.getElementById('delete-account-modal-template').content.cloneNode(true);
+                document.body.appendChild(modalTemplate);
+
+                const overlay = document.getElementById('delete-modal-overlay');
+                const form = document.getElementById('delete-account-form');
+                const errorEl = document.getElementById('delete-error');
+                const cancelBtn = document.getElementById('cancel-delete-btn');
+
+                // Cerrar modal
+                const closeModal = () => {
+                    overlay.remove();
+                };
+
+                cancelBtn.addEventListener('click', closeModal);
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) closeModal();
+                });
+
+                // Enviar formulario
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    errorEl.classList.add('hidden');
+
+                    const password = document.getElementById('delete-password').value;
+
+                    try {
+                        const res = await fetch('/api/user/account', {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ password })
+                        });
+
+                        const data = await res.json();
+
+                        if (res.ok) {
+                            closeModal();
+                            currentUser = null;
+                            updateUserMenu();
+                            showNotification('Tu cuenta ha sido eliminada exitosamente.', 'success');
+                            loadUploadView();
+                        } else {
+                            errorEl.textContent = data.message;
+                            errorEl.classList.remove('hidden');
+                        }
+                    } catch (err) {
+                        errorEl.textContent = 'Error de conexión';
+                        errorEl.classList.remove('hidden');
+                    }
+                });
+
+                lucide.createIcons();
+            }
+
+            async function loadUserFiles() {
+                const filesList = document.getElementById('user-files-list');
+
+                try {
+                    const res = await fetch('/api/user/files', {
+                        credentials: 'include'
+                    });
+
+                    let data = {};
+                    try {
+                        data = await res.json();
+                    } catch (parseErr) {
+                        console.error('Error al parsear respuesta de archivos:', parseErr);
+                        data = {};
+                    }
+
+                    if (!res.ok) {
+                        const serverMessage = data?.message || 'Error cargando archivos';
+                        throw new Error(serverMessage);
+                    }
+
+                    const files = Array.isArray(data.files) ? data.files : [];
+
+                    const countEl = document.getElementById('dashboard-file-count');
+                    const downloadsEl = document.getElementById('dashboard-total-downloads');
+                    const latestEl = document.getElementById('dashboard-latest-file');
+
+                    if (files.length === 0) {
+                        if (countEl) countEl.textContent = '0';
+                        if (downloadsEl) downloadsEl.textContent = '0';
+                        if (latestEl) latestEl.textContent = 'Sin archivos';
+                        filesList.innerHTML = '<p class="text-center text-gray-500 py-8">No has subido ningún archivo aún.</p>';
+                        return;
+                    }
+
+                    const totalDownloads = files.reduce((sum, file) => sum + (file.downloadCount || 0), 0);
+                    if (countEl) countEl.textContent = files.length;
+                    if (downloadsEl) downloadsEl.textContent = totalDownloads;
+                    if (latestEl) {
+                        const latestFile = files[0];
+                        latestEl.textContent = `${latestFile.originalName} • hace ${formatTimeSince(latestFile.createdAt)}`;
+                    }
+
+                    filesList.innerHTML = '';
+
+                    files.forEach(file => {
+                        const fileItem = document.createElement('div');
+                        fileItem.className = 'p-4 bg-white/5 dark:bg-slate-800/30 light:bg-gray-100/50 rounded-lg border border-gray-300 dark:border-slate-700 flex justify-between items-center';
+
+                        const expiryInfo = [];
+                        if (file.expiresAt) {
+                            const expired = file.expiresAt < Date.now();
+                            expiryInfo.push(`<span class="${expired ? 'text-red-400' : 'text-gray-400'}">${expired ? 'Expirado' : 'Expira: ' + new Date(file.expiresAt).toLocaleDateString()}</span>`);
+                        }
+                        if (file.maxDownloads) {
+                            expiryInfo.push(`<span class="text-gray-400">${file.downloadCount}/${file.maxDownloads} descargas</span>`);
+                        }
+
+                        fileItem.innerHTML = `
+                            <div class="flex-1">
+                                <p class="font-medium dark:text-white light:text-gray-800">${file.originalName}</p>
+                                <p class="text-sm text-gray-400">${formatBytes(file.size)} • Subido hace ${formatTimeSince(file.createdAt)}</p>
+                                <p class="text-xs text-red-400 mt-1">Descargas: ${file.downloadCount || 0}</p>
+                                ${expiryInfo.length > 0 ? '<p class="text-xs mt-1 text-gray-400">' + expiryInfo.join(' • ') + '</p>' : ''}
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="copy-link-btn px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors" data-id="${file.id}">
+                                    <i data-lucide="copy" class="icon" style="width:1rem; height:1rem;"></i>
+                                </button>
+                                <button class="delete-file-btn px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors" data-id="${file.id}">
+                                    <i data-lucide="trash-2" class="icon" style="width:1rem; height:1rem;"></i>
+                                </button>
+                            </div>
+                        `;
+
+                        filesList.appendChild(fileItem);
+
+                        // Botón copiar enlace
+                        fileItem.querySelector('.copy-link-btn').addEventListener('click', () => {
+                            const url = `${window.location.origin}/share/${file.id}`;
+                            navigator.clipboard.writeText(url).then(() => {
+                                const btn = fileItem.querySelector('.copy-link-btn');
+                                btn.innerHTML = '<i data-lucide="check" class="icon" style="width:1rem; height:1rem;"></i>';
+                                setTimeout(() => {
+                                    btn.innerHTML = '<i data-lucide="copy" class="icon" style="width:1rem; height:1rem;"></i>';
+                                    lucide.createIcons();
+                                }, 2000);
+                                lucide.createIcons();
+                            });
+                        });
+
+                        // Botón eliminar archivo
+                        fileItem.querySelector('.delete-file-btn').addEventListener('click', async () => {
+                            if (!confirm('¿Estás seguro de eliminar este archivo?')) return;
+
+                            try {
+                                const res = await fetch(`/api/user/files/${file.id}`, {
+                                    method: 'DELETE',
+                                    credentials: 'include'
+                                });
+
+                                if (res.ok) {
+                                    fileItem.remove();
+                                    if (filesList.children.length === 0) {
+                                        filesList.innerHTML = '<p class="text-center text-gray-500 py-8">No has subido ningún archivo aún.</p>';
+                                    }
+                                    showNotification('Archivo eliminado correctamente.', 'success');
+                                } else {
+                                    const data = await res.json();
+                                    showNotification(data?.message || 'No se pudo eliminar el archivo.', 'error');
+                                }
+                            } catch (err) {
+                                showNotification('Error de conexión', 'error');
+                            }
+                        });
+                    });
+
+                    lucide.createIcons();
+
+                } catch (err) {
+                    console.error('Error al cargar archivos del usuario:', err);
+                    const message = err.message && err.message.toLowerCase().includes('autoriz')
+                        ? 'Tu sesión ha expirado. Inicia sesión nuevamente para ver tus archivos.'
+                        : 'Hubo un problema al cargar tus archivos. Por favor, intenta de nuevo.';
+                    filesList.innerHTML = `<p class="text-center text-red-500 py-8">${message}</p>`;
+                    const countEl = document.getElementById('dashboard-file-count');
+                    const downloadsEl = document.getElementById('dashboard-total-downloads');
+                    const latestEl = document.getElementById('dashboard-latest-file');
+                    if (countEl) countEl.textContent = '—';
+                    if (downloadsEl) downloadsEl.textContent = '—';
+                    if (latestEl) latestEl.textContent = 'Sin datos';
+                }
+            }
+            
+            // --- Lógica del Tema (Claro/Oscuro) ---
+            const themeToggle = document.getElementById('themeToggle');
+            
+            function setTheme(isDark) {
+                const htmlEl = document.documentElement;
+                if (isDark) {
+                    htmlEl.classList.remove('light');
+                    htmlEl.classList.add('dark');
+                    htmlEl.setAttribute('data-theme', 'dark');
+                    localStorage.theme = 'dark';
+                } else {
+                    htmlEl.classList.remove('dark');
+                    htmlEl.classList.add('light');
+                    htmlEl.setAttribute('data-theme', 'light');
+                    localStorage.theme = 'light';
+                }
+                lucide.createIcons(); // Refrescar iconos
+            }
+            
+            // Event listener para el toggle
+            themeToggle.addEventListener('click', () => {
+                const isDark = document.documentElement.classList.contains('dark');
+                setTheme(!isDark);
+            });
+
+            // Aplicar tema guardado al cargar
+            if (localStorage.theme === 'dark') {
+                setTheme(true); // Tema oscuro
+            } else {
+                // Por defecto claro
+                setTheme(false); // Tema claro
+            }
+
+            // --- Renderizar Iconos Lucide ---
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
