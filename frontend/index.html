@@ -547,8 +547,15 @@
         }
         
         /* Títulos en modo claro */
-        .light h1, .light .text-white {
+        .light h1 {
             color: #1f2937 !important; /* Gris muy oscuro para títulos */
+        }
+        
+        /* Excepción para elementos con fondo rojo en modo claro */
+        .light .bg-red-600 .text-white,
+        .light .bg-red-500 .text-white,
+        .light button.bg-gradient-to-r.text-white {
+            color: #ffffff !important;
         }
         
         /* Texto secundario en modo claro */
@@ -803,9 +810,19 @@
                 padding-top: 2.0rem;
             }
         }
+
+        /* Fix para el padding superior del contenedor principal */
+        #app-container {
+            padding-top: 6rem !important; /* 96px para evitar solapamiento con el header */
+        }
+
+        /* Reducción específica para la vista de subida */
+        #app-container.upload-view {
+            padding-top: 2.2rem !important; /* 40% menos que 3.6rem */
+        }
     </style>
 </head>
-<body class="dark:bg-slate-900 dark:text-slate-200 light:bg-gray-50 light:text-gray-800 overflow-x-hidden transition-colors duration-300">
+<body class="bg-gray-50 text-gray-800 dark:bg-slate-900 dark:text-slate-200 overflow-x-hidden transition-colors duration-300">
     <!-- Notificación global -->
     <div id="global-notification" class="fixed inset-x-0 top-4 z-50 justify-center px-4 pointer-events-none hidden">
         <div id="global-notification-content" class="max-w-lg w-full px-4 py-3 rounded-lg shadow-lg text-sm font-medium text-white text-center bg-slate-800/90 backdrop-blur"></div>
@@ -820,7 +837,7 @@
                 <img src="/assets/branding/sendu-dark.svg" alt="Sendu" class="brand-logo logo-dark branding-loading">
             </div>
             <div>
-                <h1 id="header-brand-name" class="text-lg font-bold text-white dark:text-white light:text-gray-800 branding-loading">Sendu</h1>
+                <h1 id="header-brand-name" class="text-lg font-bold text-gray-800 dark:text-white branding-loading">Sendu</h1>
             </div>
         </a>
         
@@ -845,7 +862,7 @@
     </nav>
 
     <!-- Contenedor principal -->
-    <div id="app-container" class="min-h-screen w-full flex items-center justify-center p-4 pt-24 transition-all duration-300">
+    <div id="app-container" class="min-h-screen w-full flex items-center justify-center p-4 transition-all duration-300">
         <!-- El contenido de la vista se inyecta dinámicamente -->
     </div>
 
@@ -855,9 +872,9 @@
             <div class="glass-container w-full max-w-md mx-4 p-6 space-y-4 scale-95 transition-transform duration-200 transform" data-confirm-modal>
                 <div class="flex items-center gap-3">
                     <i data-lucide="help-circle" class="w-6 h-6 text-red-400" data-confirm-icon></i>
-                    <h3 class="text-xl font-semibold text-white dark:text-white light:text-gray-800" data-confirm-title>Confirmar acción</h3>
+                    <h3 class="text-xl font-semibold text-gray-800 dark:text-white" data-confirm-title>Confirmar acción</h3>
                 </div>
-                <p class="text-sm text-gray-300 dark:text-gray-300 light:text-gray-600" data-confirm-message>¿Deseas continuar?</p>
+                <p class="text-sm text-gray-600 dark:text-gray-300" data-confirm-message>¿Deseas continuar?</p>
                 <div class="flex flex-col sm:flex-row gap-3 pt-4">
                     <button class="btn-outline flex-1 justify-center" data-confirm-cancel>Cancelar</button>
                     <button class="flex-1 px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 text-white bg-red-600 hover:bg-red-700" data-confirm-accept>
@@ -879,17 +896,17 @@
             <div class="glass-container p-8 md:p-12">
                 <!-- Header -->
                 <div class="text-center space-y-4 mb-12">
-                    <h2 class="text-4xl md:text-5xl font-bold text-white dark:text-white light:text-gray-800">Sube tu archivo</h2>
-                    <p class="text-xl text-gray-200 dark:text-gray-200 light:text-gray-600">Arrastra y suelta o haz clic para seleccionar</p>
+                    <h2 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">Sube tu archivo</h2>
+                    <p class="text-xl text-gray-800 dark:text-gray-100 font-medium">Arrastra y suelta o haz clic para seleccionar</p>
                 </div>
 
             <!-- Dropzone Principal -->
             <form id="upload-form">
-                <label for="file-input" id="drop-zone" class="relative w-full h-80 md:h-96 border-3 border-dashed border-gray-400 dark:border-gray-500 light:border-blue-400 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-500 hover:border-indigo-400 dark:hover:border-indigo-400 light:hover:border-blue-500 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-blue-50 hover:scale-105">
-                    <i data-lucide="upload-cloud" class="w-20 h-20 md:w-24 md:h-24 text-gray-300 dark:text-gray-400 light:text-blue-500 mb-4 stroke-1"></i>
-                    <span id="drop-main-text" class="font-semibold text-xl md:text-2xl text-gray-200 dark:text-gray-200 light:text-gray-700 mb-2">Arrastra tu archivo aquí</span>
-                    <span id="drop-sub-text" class="text-base text-gray-300 dark:text-gray-400 light:text-gray-500 mb-4">o haz clic para seleccionar</span>
-                    <span class="text-sm text-gray-400 dark:text-gray-500 light:text-gray-400 px-4 py-2 bg-black/20 dark:bg-white/10 light:bg-white/70 rounded-full">Tamaño máximo: 10GB</span>
+                <label for="file-input" id="drop-zone" class="relative w-full h-80 md:h-96 border-3 border-dashed border-blue-400 dark:border-gray-500 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-500 hover:border-blue-500 dark:hover:border-indigo-400 hover:bg-blue-50 dark:hover:bg-white/10 hover:scale-105">
+                    <i data-lucide="upload-cloud" class="w-20 h-20 md:w-24 md:h-24 text-blue-600 dark:text-gray-200 mb-4 stroke-1"></i>
+                    <span id="drop-main-text" class="font-bold text-xl md:text-2xl text-gray-900 dark:text-white mb-2">Arrastra tu archivo aquí</span>
+                    <span id="drop-sub-text" class="text-base text-gray-700 dark:text-gray-200 mb-4">o haz clic para seleccionar</span>
+                    <span class="text-sm text-gray-600 dark:text-gray-300 px-4 py-2 bg-white/70 dark:bg-white/10 rounded-full">Tamaño máximo: 10GB</span>
                     <input type="file" id="file-input" class="file-input">
                     
                     <!-- Overlay al arrastrar -->
@@ -903,43 +920,43 @@
 
                 <!-- Opciones expandibles (ocultas inicialmente) -->
                 <div id="upload-options" class="hidden mt-8 space-y-6 animate-in slide-in-from-top-4 duration-500">
-                    <div class="border-t border-gray-300 dark:border-gray-600 light:border-blue-200 pt-6">
-                        <h3 class="text-xl font-semibold text-gray-200 dark:text-gray-200 light:text-gray-700 mb-6 text-center">Configurar opciones de compartir</h3>
+                    <div class="border-t border-blue-200 dark:border-gray-600 pt-6">
+                        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-6 text-center">Configurar opciones de compartir</h3>
                         
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <!-- Contraseña -->
                             <div class="space-y-2">
-                                <label for="password" class="block text-sm font-medium text-gray-200 dark:text-gray-200 light:text-gray-700">
+                                <label for="password" class="block text-sm font-bold text-gray-900 dark:text-gray-100">
                                     <i data-lucide="lock" class="w-4 h-4 inline mr-2"></i>
                                     Contraseña
                                 </label>
-                                <input type="password" id="password" placeholder="Dejar vacío para sin contraseña" class="glass-button w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 light:focus:ring-red-500 text-white dark:text-white light:text-gray-700 placeholder-gray-400 light:placeholder-gray-500 text-sm">
+                                <input type="password" id="password" placeholder="Dejar vacío para sin contraseña" class="glass-button w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-indigo-400 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-300 text-sm">
                             </div>
                             
                             <!-- Expiración -->
                             <div class="space-y-2">
-                                <label for="expires" class="block text-sm font-medium text-gray-200 dark:text-gray-200 light:text-gray-700">
+                                <label for="expires" class="block text-sm font-bold text-gray-900 dark:text-gray-100">
                                     <i data-lucide="calendar" class="w-4 h-4 inline mr-2"></i>
                                     Expiración (Días)
                                 </label>
-                                <input type="number" id="expires" placeholder="15 días máximo" min="1" max="15" step="1" inputmode="numeric" pattern="\d*" class="glass-button w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 light:focus:ring-red-500 text-white dark:text-white light:text-gray-700 placeholder-gray-400 light:placeholder-gray-500 text-sm">
-                                <span class="text-xs text-gray-400 dark:text-gray-500 light:text-gray-400">Máximo 15 días • Vacío = 15 días</span>
+                                <input type="number" id="expires" placeholder="15 días máximo" min="1" max="15" step="1" inputmode="numeric" pattern="\d*" class="glass-button w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-indigo-400 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-300 text-sm">
+                                <span class="text-xs text-gray-600 dark:text-gray-300">Máximo 15 días • Vacío = 15 días</span>
                             </div>
                             
                             <!-- Máximo de descargas -->
                             <div class="space-y-2">
-                                <label for="maxDownloads" class="block text-sm font-medium text-gray-200 dark:text-gray-200 light:text-gray-700">
+                                <label for="maxDownloads" class="block text-sm font-bold text-gray-900 dark:text-gray-100">
                                     <i data-lucide="download" class="w-4 h-4 inline mr-2"></i>
                                     Máx. Descargas
                                 </label>
-                                <input type="number" id="maxDownloads" placeholder="Dejar vacío = ilimitado" min="1" class="glass-button w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 light:focus:ring-red-500 text-white dark:text-white light:text-gray-700 placeholder-gray-400 light:placeholder-gray-500 text-sm">
-                                <span class="text-xs text-gray-400 dark:text-gray-500 light:text-gray-400">Vacío = Descargas ilimitadas</span>
+                                <input type="number" id="maxDownloads" placeholder="Dejar vacío = ilimitado" min="1" class="glass-button w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-indigo-400 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-300 text-sm">
+                                <span class="text-xs text-gray-600 dark:text-gray-300">Vacío = Descargas ilimitadas</span>
                             </div>
                         </div>
                         
                         <!-- Botón de subir -->
-                        <div class="mt-8 text-center">
-                            <button type="button" id="start-upload" class="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 text-lg shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center gap-3 mx-auto">
+                        <div class="mt-8 text-center flex justify-center">
+                            <button type="button" id="start-upload" class="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 text-lg shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center gap-3 mx-auto">
                                 <i data-lucide="upload" class="w-5 h-5"></i>
                                 Subir archivo
                             </button>
@@ -960,18 +977,18 @@
         <div class="glass-container p-8 md:p-12 w-full max-w-2xl mx-auto space-y-8">
             <!-- Header -->
             <div class="text-center space-y-4">
-                <i data-lucide="file-down" class="w-20 h-20 text-white dark:text-white light:text-blue-600 mx-auto stroke-1"></i>
-                <h1 class="text-4xl md:text-5xl font-bold text-white dark:text-white light:text-gray-800">Listo para descargar</h1>
+                <i data-lucide="file-down" class="w-20 h-20 text-blue-600 dark:text-white mx-auto stroke-1"></i>
+                <h1 class="text-4xl md:text-5xl font-bold text-gray-800 dark:text-white">Listo para descargar</h1>
             </div>
 
             <!-- Info Archivo -->
-            <div class="bg-white/10 dark:bg-white/10 light:bg-blue-50 p-6 rounded-xl text-center">
+            <div class="bg-blue-50 dark:bg-white/10 p-6 rounded-xl text-center">
                 <!-- Preview Container -->
                 <div id="file-preview-container" class="hidden mb-4 justify-center">
                     <img id="file-preview-img" src="" alt="Vista previa" class="max-h-64 rounded-lg shadow-lg object-contain">
                 </div>
-                <p id="file-name" class="font-semibold text-2xl text-white dark:text-white light:text-gray-800 break-words mb-2">nombre_archivo.zip</p>
-                <p id="file-size" class="text-lg text-gray-200 dark:text-gray-200 light:text-gray-600">12.3 MB</p>
+                <p id="file-name" class="font-semibold text-2xl text-gray-800 dark:text-white break-words mb-2">nombre_archivo.zip</p>
+                <p id="file-size" class="text-lg text-gray-600 dark:text-gray-200">12.3 MB</p>
             </div>
 
             <!-- Formulario de Descarga -->
@@ -1021,7 +1038,7 @@
                         class="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800 text-sm resize-none"
                         required
                     ></textarea>
-                    <div id="report-error" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm"></div>
+                    <div id="report-error" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg text-white text-sm"></div>
                     <div class="flex gap-3">
                         <button 
                             type="button"
@@ -1045,27 +1062,27 @@
     <!-- Template para login -->
     <template id="login-view-template">
         <div class="w-full max-w-md glass-container p-8 animate-in slide-in-from-top-4 duration-500">
-            <h2 class="text-2xl font-bold text-center mb-6 dark:text-white light:text-gray-800">Iniciar Sesión</h2>
+            <h2 class="text-2xl font-bold text-center mb-6 text-gray-800 dark:text-white">Iniciar Sesión</h2>
             
             <form id="login-form" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium mb-2 dark:text-gray-300 light:text-gray-700">Email o Usuario</label>
+                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Email o Usuario</label>
                     <input 
                         type="text" 
                         id="login-email-username" 
                         required
-                        class="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
+                        class="w-full px-4 py-3 rounded-lg bg-white dark:bg-slate-800/50 border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-800 dark:text-white"
                         placeholder="email@ejemplo.com o usuario"
                     >
                 </div>
                 
                 <div>
-                    <label class="block text-sm font-medium mb-2 dark:text-gray-300 light:text-gray-700">Contraseña</label>
+                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Contraseña</label>
                     <input 
                         type="password" 
                         id="login-password" 
                         required
-                        class="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
+                        class="w-full px-4 py-3 rounded-lg bg-white dark:bg-slate-800/50 border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-800 dark:text-white"
                         placeholder="Tu contraseña"
                     >
                 </div>
@@ -1074,7 +1091,7 @@
                     <a href="#" id="goto-forgot-password" class="text-sm text-red-500 hover:text-red-400 font-medium">¿Olvidaste tu contraseña?</a>
                 </div>
 
-                <div id="login-error" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm"></div>
+                <div id="login-error" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg text-white text-sm"></div>
 
                 <button 
                     type="submit"
@@ -1085,7 +1102,7 @@
             </form>
 
             <div class="mt-6 text-center">
-                <p class="text-sm dark:text-gray-400 light:text-gray-600">
+                <p class="text-sm text-gray-600 dark:text-gray-400">
                     ¿No tienes cuenta? 
                     <a href="#" id="goto-register" class="text-red-500 hover:text-red-400 font-medium">Regístrate aquí</a>
                 </p>
@@ -1099,47 +1116,47 @@
     <!-- Template para registro -->
     <template id="register-view-template">
         <div class="w-full max-w-md glass-container p-8 animate-in slide-in-from-top-4 duration-500">
-            <h2 class="text-2xl font-bold text-center mb-6 dark:text-white light:text-gray-800">Crear Cuenta</h2>
+            <h2 class="text-2xl font-bold text-center mb-6 text-gray-800 dark:text-white">Crear Cuenta</h2>
             
             <form id="register-form" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium mb-2 dark:text-gray-300 light:text-gray-700">Email</label>
+                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Email</label>
                     <input 
                         type="email" 
                         id="register-email" 
                         required
                         pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
                         title="Ingresa un email válido (ejemplo: correo@dominio.com)"
-                        class="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
+                        class="w-full px-4 py-3 rounded-lg bg-white dark:bg-slate-800/50 border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-800 dark:text-white"
                         placeholder="email@ejemplo.com"
                     >
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium mb-2 dark:text-gray-300 light:text-gray-700">Usuario</label>
+                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Usuario</label>
                     <input 
                         type="text" 
                         id="register-username" 
                         required
                         minlength="3"
-                        class="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
+                        class="w-full px-4 py-3 rounded-lg bg-white dark:bg-slate-800/50 border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-800 dark:text-white"
                         placeholder="nombreusuario"
                     >
                 </div>
                 
                 <div>
-                    <label class="block text-sm font-medium mb-2 dark:text-gray-300 light:text-gray-700">Contraseña</label>
+                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Contraseña</label>
                     <input 
                         type="password" 
                         id="register-password" 
                         required
                         minlength="8"
-                        class="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
+                        class="w-full px-4 py-3 rounded-lg bg-white dark:bg-slate-800/50 border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-800 dark:text-white"
                         placeholder="Mínimo 8 caracteres"
                     >
                 </div>
 
-                <div id="register-error" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm"></div>
+                <div id="register-error" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg text-white text-sm"></div>
 
                 <button 
                     type="submit"
@@ -1150,7 +1167,7 @@
             </form>
 
             <div class="mt-6 text-center">
-                <p class="text-sm dark:text-gray-400 light:text-gray-600">
+                <p class="text-sm text-gray-600 dark:text-gray-400">
                     ¿Ya tienes cuenta? 
                     <a href="#" id="goto-login" class="text-red-500 hover:text-red-400 font-medium">Inicia sesión aquí</a>
                 </p>
@@ -1161,23 +1178,23 @@
     <!-- Template para recuperar contraseña -->
     <template id="forgot-password-view-template">
         <div class="w-full max-w-md glass-container p-8 animate-in slide-in-from-top-4 duration-500">
-            <h2 class="text-2xl font-bold text-center mb-6 dark:text-white light:text-gray-800">Recuperar Contraseña</h2>
-            <p class="text-sm text-center mb-6 dark:text-gray-300 light:text-gray-600">Ingresa tu email y te enviaremos un enlace para restablecer tu contraseña.</p>
+            <h2 class="text-2xl font-bold text-center mb-6 text-gray-800 dark:text-white">Recuperar Contraseña</h2>
+            <p class="text-sm text-center mb-6 text-gray-600 dark:text-gray-300">Ingresa tu email y te enviaremos un enlace para restablecer tu contraseña.</p>
             
             <form id="forgot-password-form" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium mb-2 dark:text-gray-300 light:text-gray-700">Email</label>
+                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Email</label>
                     <input 
                         type="email" 
                         id="forgot-email" 
                         required
-                        class="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
+                        class="w-full px-4 py-3 rounded-lg bg-white dark:bg-slate-800/50 border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-800 dark:text-white"
                         placeholder="email@ejemplo.com"
                     >
                 </div>
 
                 <div id="forgot-message" class="hidden p-3 bg-green-500/20 border border-green-500 rounded-lg text-green-400 text-sm"></div>
-                <div id="forgot-error" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm"></div>
+                <div id="forgot-error" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg text-white text-sm"></div>
 
                 <button 
                     type="submit"
@@ -1196,23 +1213,23 @@
     <!-- Template para restablecer contraseña -->
     <template id="reset-password-view-template">
         <div class="w-full max-w-md glass-container p-8 animate-in slide-in-from-top-4 duration-500">
-            <h2 class="text-2xl font-bold text-center mb-6 dark:text-white light:text-gray-800">Restablecer Contraseña</h2>
+            <h2 class="text-2xl font-bold text-center mb-6 text-gray-800 dark:text-white">Restablecer Contraseña</h2>
             
             <form id="reset-password-form" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium mb-2 dark:text-gray-300 light:text-gray-700">Nueva Contraseña</label>
+                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Nueva Contraseña</label>
                     <input 
                         type="password" 
                         id="reset-new-password" 
                         required
                         minlength="8"
-                        class="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
+                        class="w-full px-4 py-3 rounded-lg bg-white dark:bg-slate-800/50 border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-800 dark:text-white"
                         placeholder="Mínimo 8 caracteres"
                     >
                 </div>
 
                 <div id="reset-message" class="hidden p-3 bg-green-500/20 border border-green-500 rounded-lg text-green-400 text-sm"></div>
-                <div id="reset-error" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm"></div>
+                <div id="reset-error" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg text-white text-sm"></div>
 
                 <button 
                     type="submit"
@@ -1229,11 +1246,11 @@
         <div class="w-full max-w-6xl glass-container p-8 animate-in slide-in-from-top-4 duration-500 space-y-8">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <h2 class="text-2xl font-bold dark:text-white light:text-gray-800">Mi Dashboard</h2>
-                    <p class="text-sm dark:text-gray-400 light:text-gray-600 mt-1">
+                    <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Mi Dashboard</h2>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
                         Bienvenido, <span id="dashboard-username" class="font-medium text-red-500"></span>
                     </p>
-                    <p class="text-xs dark:text-gray-500 light:text-gray-500 mt-2">Aquí encontrarás todos tus archivos y su actividad.</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-500 mt-2">Aquí encontrarás todos tus archivos y su actividad.</p>
                 </div>
                 <div class="flex flex-wrap gap-3">
                     <button 
@@ -1255,32 +1272,32 @@
 
             <!-- Resumen rápido -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div class="p-4 bg-white/5 dark:bg-slate-800/30 light:bg-gray-100/60 rounded-lg border border-gray-300 dark:border-slate-700 col-span-1 sm:col-span-3">
+                <div class="p-4 bg-gray-100/60 dark:bg-slate-800/30 rounded-lg border border-gray-300 dark:border-slate-700 col-span-1 sm:col-span-3">
                     <div class="flex justify-between items-center mb-2">
                         <p class="text-xs uppercase tracking-wide text-gray-400">Almacenamiento</p>
                         <p id="storage-text" class="text-xs text-gray-400">0 GB / 100 GB</p>
                     </div>
-                    <div class="w-full bg-gray-700 rounded-full h-2.5 dark:bg-gray-700 light:bg-gray-300">
+                    <div class="w-full bg-gray-300 dark:bg-gray-700 rounded-full h-2.5">
                         <div id="storage-bar" class="bg-red-600 h-2.5 rounded-full" style="width: 0%"></div>
                     </div>
                 </div>
-                <div class="p-4 bg-white/5 dark:bg-slate-800/30 light:bg-gray-100/60 rounded-lg border border-gray-300 dark:border-slate-700">
+                <div class="p-4 bg-gray-100/60 dark:bg-slate-800/30 rounded-lg border border-gray-300 dark:border-slate-700">
                     <p class="text-xs uppercase tracking-wide text-gray-400">Archivos subidos</p>
-                    <p id="dashboard-file-count" class="text-2xl font-semibold mt-2 dark:text-white light:text-gray-800">0</p>
+                    <p id="dashboard-file-count" class="text-2xl font-semibold mt-2 text-gray-800 dark:text-white">0</p>
                 </div>
-                <div class="p-4 bg-white/5 dark:bg-slate-800/30 light:bg-gray-100/60 rounded-lg border border-gray-300 dark:border-slate-700">
+                <div class="p-4 bg-gray-100/60 dark:bg-slate-800/30 rounded-lg border border-gray-300 dark:border-slate-700">
                     <p class="text-xs uppercase tracking-wide text-gray-400">Descargas totales</p>
-                    <p id="dashboard-total-downloads" class="text-2xl font-semibold mt-2 dark:text-white light:text-gray-800">0</p>
+                    <p id="dashboard-total-downloads" class="text-2xl font-semibold mt-2 text-gray-800 dark:text-white">0</p>
                 </div>
-                <div class="p-4 bg-white/5 dark:bg-slate-800/30 light:bg-gray-100/60 rounded-lg border border-gray-300 dark:border-slate-700">
+                <div class="p-4 bg-gray-100/60 dark:bg-slate-800/30 rounded-lg border border-gray-300 dark:border-slate-700">
                     <p class="text-xs uppercase tracking-wide text-gray-400">Archivo más reciente</p>
-                    <p id="dashboard-latest-file" class="text-sm mt-2 dark:text-white light:text-gray-800">Sin archivos</p>
+                    <p id="dashboard-latest-file" class="text-sm mt-2 text-gray-800 dark:text-white">Sin archivos</p>
                 </div>
             </div>
 
             <!-- Lista de archivos -->
             <div>
-                <h3 class="text-lg font-semibold mb-4 dark:text-white light:text-gray-800">Mis Archivos</h3>
+                <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-white">Mis Archivos</h3>
                 <div id="user-files-list" class="space-y-3">
                     <p class="text-center text-gray-500 py-8">Cargando archivos...</p>
                 </div>
@@ -1293,8 +1310,8 @@
         <div class="w-full max-w-4xl glass-container p-8 animate-in slide-in-from-top-4 duration-500 space-y-8">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <h2 class="text-2xl font-bold dark:text-white light:text-gray-800">Configuración</h2>
-                    <p class="text-sm dark:text-gray-400 light:text-gray-600 mt-1">Actualiza tu contraseña o elimina tu cuenta.</p>
+                    <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Configuración</h2>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Actualiza tu contraseña o elimina tu cuenta.</p>
                 </div>
                 <button 
                     id="back-to-dashboard"
@@ -1305,14 +1322,14 @@
                 </button>
             </div>
 
-            <div class="p-6 bg-white/5 dark:bg-slate-800/30 light:bg-gray-100/50 rounded-lg border border-gray-300 dark:border-slate-700">
-                <h3 class="text-lg font-semibold mb-4 dark:text-white light:text-gray-800">Datos de perfil</h3>
+            <div class="p-6 bg-gray-100/50 dark:bg-slate-800/30 rounded-lg border border-gray-300 dark:border-slate-700">
+                <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-white">Datos de perfil</h3>
                 <form id="update-profile-form" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <input 
                         type="email" 
                         id="profile-email" 
                         placeholder="Email"
-                        class="px-4 py-2 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
+                        class="px-4 py-2 rounded-lg bg-white dark:bg-slate-800/50 border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-800 dark:text-white"
                         required
                     >
                     <input 
@@ -1320,7 +1337,7 @@
                         id="profile-username" 
                         placeholder="Usuario"
                         minlength="3"
-                        class="px-4 py-2 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
+                        class="px-4 py-2 rounded-lg bg-white dark:bg-slate-800/50 border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-800 dark:text-white"
                         required
                     >
                     <button 
@@ -1333,14 +1350,14 @@
                 <div id="profile-update-message" class="hidden mt-3 p-3 rounded-lg text-sm"></div>
             </div>
 
-            <div class="p-6 bg-white/5 dark:bg-slate-800/30 light:bg-gray-100/50 rounded-lg border border-gray-300 dark:border-slate-700">
-                <h3 class="text-lg font-semibold mb-4 dark:text-white light:text-gray-800">Cambiar contraseña</h3>
+            <div class="p-6 bg-gray-100/50 dark:bg-slate-800/30 rounded-lg border border-gray-300 dark:border-slate-700">
+                <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-white">Cambiar contraseña</h3>
                 <form id="change-password-form" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <input 
                         type="password" 
                         id="current-password" 
                         placeholder="Contraseña actual"
-                        class="px-4 py-2 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
+                        class="px-4 py-2 rounded-lg bg-white dark:bg-slate-800/50 border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-800 dark:text-white"
                         required
                     >
                     <input 
@@ -1348,7 +1365,7 @@
                         id="new-password" 
                         placeholder="Nueva contraseña"
                         minlength="8"
-                        class="px-4 py-2 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
+                        class="px-4 py-2 rounded-lg bg-white dark:bg-slate-800/50 border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-800 dark:text-white"
                         required
                     >
                     <button 
@@ -1361,9 +1378,9 @@
                 <div id="password-change-message" class="hidden mt-3 p-3 rounded-lg text-sm"></div>
             </div>
 
-            <div class="p-6 bg-red-500/10 dark:bg-red-900/20 light:bg-red-50 rounded-lg border border-red-500/30">
-                <h3 class="text-lg font-semibold mb-2 text-red-500 dark:text-red-400">Zona peligrosa</h3>
-                <p class="text-sm text-gray-400 dark:text-gray-400 light:text-gray-600 mb-4">
+            <div class="p-6 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-500/30">
+                <h3 class="text-lg font-semibold mb-2 text-gray-800 dark:text-white">Zona peligrosa</h3>
+                <p class="text-sm text-gray-600 dark:text-white mb-4">
                     Una vez eliminada tu cuenta, no hay vuelta atrás. Todos tus archivos serán eliminados permanentemente.
                 </p>
                 <button 
@@ -1733,7 +1750,7 @@
                         class="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
                         required
                     >
-                    <div id="delete-error" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm"></div>
+                    <div id="delete-error" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg text-white text-sm"></div>
                     <div class="flex gap-3">
                         <button 
                             type="button"
@@ -1776,7 +1793,7 @@
                             <option value="admin">Administrador</option>
                         </select>
                     </div>
-                    <div id="edit-user-error" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm"></div>
+                    <div id="edit-user-error" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg text-white text-sm"></div>
                     <div class="flex gap-3 pt-2">
                         <button type="button" id="cancel-edit-user-btn" class="btn-outline flex-1 justify-center">Cancelar</button>
                         <button type="submit" class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">Guardar</button>
@@ -1788,11 +1805,11 @@
     
     <!-- Template para item de progreso -->
     <template id="upload-item-template">
-        <div class="bg-white/10 dark:bg-white/10 light:bg-blue-50 p-6 rounded-xl space-y-4 upload-item" role="progressbar">
+        <div class="bg-blue-50 dark:bg-white/10 p-6 rounded-xl space-y-4 upload-item" role="progressbar">
             <div class="flex justify-between items-center">
-                <span class="file-name text-lg font-semibold text-white dark:text-white light:text-gray-800 truncate max-w-[300px]">file.name</span>
+                <span class="file-name text-lg font-semibold text-gray-800 dark:text-white truncate max-w-[300px]">file.name</span>
                 <div class="flex items-center gap-3">
-                    <span class="status-text text-base text-gray-200 dark:text-gray-200 light:text-gray-600 font-medium">Subiendo...</span>
+                    <span class="status-text text-base text-gray-600 dark:text-gray-200 font-medium">Subiendo...</span>
                     <button class="cancel-upload-btn glass-button p-2 rounded-lg hover:bg-red-500/30 transition-colors hidden" title="Cancelar subida">
                         <i data-lucide="x" class="w-5 h-5 text-red-400"></i>
                     </button>
@@ -1800,15 +1817,15 @@
             </div>
             <div class="space-y-2">
                 <progress class="w-full h-3 rounded-lg" value="0" max="100" style="display: block; height: 16px;"></progress>
-                <div class="flex justify-between items-center text-xs text-gray-400 dark:text-gray-400 light:text-gray-500">
+                <div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
                     <span class="progress-detail">Preparando...</span>
                     <span class="speed-text"></span>
                 </div>
             </div>
             <div class="result-link hidden">
-                <input type="text" readonly class="glass-button w-full px-4 py-3 rounded-xl text-base text-indigo-300 dark:text-indigo-300 light:text-blue-600 focus:outline-none mb-3">
+                <input type="text" readonly class="glass-button w-full px-4 py-3 rounded-xl text-base text-blue-600 dark:text-indigo-300 focus:outline-none mb-3">
                 <div class="flex gap-2">
-                    <button class="copy-button glass-button px-4 py-3 rounded-xl text-base flex items-center gap-2 light:text-gray-700 hover:scale-105 transition-transform flex-1">
+                    <button class="copy-button glass-button px-4 py-3 rounded-xl text-base flex items-center gap-2 text-gray-700 hover:scale-105 transition-transform flex-1">
                         <i data-lucide="copy" class="w-5 h-5"></i>
                         Copiar enlace
                     </button>
@@ -1869,6 +1886,24 @@
                 }
             };
 
+            const setContainerAlignment = (centered) => {
+                if (centered) {
+                    appContainer.classList.add('items-center');
+                    appContainer.classList.remove('items-start');
+                } else {
+                    appContainer.classList.remove('items-center');
+                    appContainer.classList.add('items-start');
+                }
+            };
+
+            const setUploadViewPadding = (isUpload) => {
+                if (isUpload) {
+                    appContainer.classList.add('upload-view');
+                } else {
+                    appContainer.classList.remove('upload-view');
+                }
+            };
+
             function renderRoute(pathname) {
                 console.log('Rendering route:', pathname);
                 const path = normalizePath(pathname);
@@ -1877,8 +1912,12 @@
                     const fragments = path.split('/');
                     const fileId = fragments.length >= 3 ? fragments[2] : null;
                     if (fileId) {
+                        setContainerAlignment(true);
+                        setUploadViewPadding(false);
                         loadDownloadView(fileId);
                     } else {
+                        setContainerAlignment(true);
+                        setUploadViewPadding(true);
                         loadUploadView();
                     }
                     return;
@@ -1887,49 +1926,73 @@
                 switch (path) {
                     case '/dashboard':
                         if (currentUser) {
+                            setContainerAlignment(false);
+                            setUploadViewPadding(false);
                             loadDashboardView();
                         } else {
                             postAuthRedirect = '/dashboard';
+                            setContainerAlignment(true);
+                            setUploadViewPadding(false);
                             loadLoginView();
                         }
                         break;
                     case '/forgot-password':
+                        setContainerAlignment(true);
+                        setUploadViewPadding(false);
                         loadForgotPasswordView();
                         break;
                     case '/reset-password':
+                        setContainerAlignment(true);
+                        setUploadViewPadding(false);
                         loadResetPasswordView();
                         break;
                     case '/admin':
                         if (currentUser && currentUser.role === 'admin') {
+                            setContainerAlignment(false);
+                            setUploadViewPadding(false);
                             loadAdminView();
                         } else if (currentUser) {
                             showNotification('No tienes permisos para acceder a esta sección', 'error');
                             navigateTo('/dashboard', { replace: true });
                         } else {
                             postAuthRedirect = '/admin';
+                            setContainerAlignment(true);
+                            setUploadViewPadding(false);
                             loadLoginView();
                         }
                         break;
                     case '/settings':
                         if (currentUser) {
+                            setContainerAlignment(false);
+                            setUploadViewPadding(false);
                             loadSettingsView();
                         } else {
                             postAuthRedirect = '/settings';
+                            setContainerAlignment(true);
+                            setUploadViewPadding(false);
                             loadLoginView();
                         }
                         break;
                     case '/login':
                         postAuthRedirect = postAuthRedirect || '/dashboard';
+                        setContainerAlignment(true);
+                        setUploadViewPadding(false);
                         loadLoginView();
                         break;
                     case '/register':
+                        setContainerAlignment(true);
+                        setUploadViewPadding(false);
                         loadRegisterView();
                         break;
                     case '/upload':
                     case '/':
+                        setContainerAlignment(true);
+                        setUploadViewPadding(true);
                         loadUploadView();
                         break;
                     default:
+                        setContainerAlignment(true);
+                        setUploadViewPadding(true);
                         loadUploadView();
                         break;
                 }
@@ -2172,7 +2235,7 @@
                         </a>
                         ` : ''}
                         <div class="user-dropdown-divider"></div>
-                        <a href="#" id="logout-btn" class="user-dropdown-item text-red-400 hover:text-red-300">
+                        <a href="#" id="logout-btn" class="user-dropdown-item text-red-400 hover:text-white">
                             <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
                             Cerrar Sesión
                         </a>
@@ -2341,7 +2404,7 @@
                                 <td class="py-3 px-2 text-left align-middle">${u.username}</td>
                                 <td class="py-3 px-2 text-left align-middle">${u.email}</td>
                                 <td class="py-3 px-2 text-left align-middle">
-                                    <span class="px-2 py-1 rounded text-xs ${u.role === 'admin' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}">
+                                    <span class="px-2 py-1 rounded text-xs ${u.role === 'admin' ? 'bg-red-500/20 text-white' : 'bg-blue-500/20 text-blue-400'}">
                                         ${u.role}
                                     </span>
                                 </td>
@@ -3448,11 +3511,11 @@
                             currentUser = data.user;
                             updateUserMenu();
                         } else {
-                            profileMsg.className = 'mt-3 p-3 rounded-lg text-sm bg-red-500/20 text-red-400';
+                            profileMsg.className = 'mt-3 p-3 rounded-lg text-sm bg-red-500/20 text-white';
                         }
                     } catch (err) {
                         profileMsg.textContent = 'Error de conexión';
-                        profileMsg.className = 'mt-3 p-3 rounded-lg text-sm bg-red-500/20 text-red-400';
+                        profileMsg.className = 'mt-3 p-3 rounded-lg text-sm bg-red-500/20 text-white';
                         profileMsg.classList.remove('hidden');
                     }
                 });
@@ -3482,11 +3545,11 @@
                             pwdMsg.className = 'mt-3 p-3 rounded-lg text-sm bg-green-500/20 text-green-400';
                             pwdForm.reset();
                         } else {
-                            pwdMsg.className = 'mt-3 p-3 rounded-lg text-sm bg-red-500/20 text-red-400';
+                            pwdMsg.className = 'mt-3 p-3 rounded-lg text-sm bg-red-500/20 text-white';
                         }
                     } catch (err) {
                         pwdMsg.textContent = 'Error de conexión';
-                        pwdMsg.className = 'mt-3 p-3 rounded-lg text-sm bg-red-500/20 text-red-400';
+                        pwdMsg.className = 'mt-3 p-3 rounded-lg text-sm bg-red-500/20 text-white';
                         pwdMsg.classList.remove('hidden');
                     }
                 });
