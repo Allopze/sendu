@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: sendu-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - STORAGE_PATH=/app/uploads
+      - SESSION_SECRET=change_this_secret_in_production
+      - PASSWORD_SECRET=change_this_secret_in_production
+      # SMTP Configuration (Optional)
+      # - SMTP_HOST=smtp.example.com
+      # - SMTP_PORT=587
+      # - SMTP_USER=user
+      # - SMTP_PASS=password
+      # - SMTP_SECURE=false
+      # - SMTP_FROM="Sendu" <noreply@example.com>
+    volumes:
+      - ./uploads:/app/uploads
+      - ./db.sqlite:/app/db.sqlite
+      - ./sessions.sqlite:/app/sessions.sqlite

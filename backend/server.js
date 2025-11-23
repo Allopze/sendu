@@ -11,6 +11,9 @@ import { fileURLToPath } from 'url';
 import session from 'express-session';
 import bcrypt from 'bcrypt';
 import connectSqlite3 from 'connect-sqlite3';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import nodemailer from 'nodemailer';
 
 // --- Configuración Inicial ---
 const app = express();
@@ -20,6 +23,7 @@ const __dirname = path.dirname(__filename);
 
 // Rutas de almacenamiento y DB
 const STORAGE_PATH = process.env.STORAGE_PATH || path.join(__dirname, '../uploads');
+const BRANDING_PATH = path.join(STORAGE_PATH, 'branding');
 const DB_PATH = path.join(__dirname, '../db.sqlite');
 const FRONTEND_PATH = path.join(__dirname, '../frontend');
 const CHUNKS_PATH = path.join(STORAGE_PATH, 'chunks');
@@ -29,9 +33,7 @@ const SESSION_DB_DIR = path.dirname(DB_PATH);
 const SESSION_DB_NAME = process.env.SESSION_DB_NAME || 'sessions.sqlite';
 const SESSION_SECRET = process.env.SESSION_SECRET || process.env.PASSWORD_SECRET || 'default-secret-change-this';
 const isProduction = process.env.NODE_ENV === 'production';
-const sessionCookieSecure = process.env.SESSION_COOKIE_SECURE
-  ? process.env.SESSION_COOKIE_SECURE === 'true'
-  : isProduction;
+const sessionCookieSecure = process.env.SESSION_COOKIE_SECURE === 'true'; // Por defecto false para permitir HTTP/Cloudflare flexible
 const allowedSameSite = new Set(['lax', 'strict', 'none']);
 let cookieSameSite = (process.env.SESSION_COOKIE_SAMESITE || 'lax').toLowerCase();
 if (!allowedSameSite.has(cookieSameSite)) {
@@ -47,9 +49,11 @@ const sessionCookieOptions = {
 // Asegurarse de que el directorio de subida exista
 fs.mkdirSync(STORAGE_PATH, { recursive: true });
 fs.mkdirSync(CHUNKS_PATH, { recursive: true });
+fs.mkdirSync(BRANDING_PATH, { recursive: true });
 
 // --- Base de Datos (SQLite) ---
 const db = new Database(DB_PATH);
+db.pragma('journal_mode = WAL'); // Habilitar modo WAL para mejor concurrencia y rendimiento
 
 // Crear tablas si no existen
 db.exec(`
@@ -80,6 +84,46 @@ db.exec(`
   );
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS reports (
+    id TEXT PRIMARY KEY,
+    fileId TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    createdAt INTEGER NOT NULL,
+    status TEXT DEFAULT 'pending',
+    FOREIGN KEY (fileId) REFERENCES files(id)
+  );
+`);
+
+// Inicializar configuración del footer por defecto si no existe
+const defaultFooterConfig = {
+  brandName: "Sendu",
+  tagline: "Envía y comparte archivos de forma segura.",
+  logoLight: "/assets/branding/sendu-light.svg",
+  logoDark: "/assets/branding/sendu-dark.svg",
+  contactLinks: [
+    { text: "Email", url: "mailto:contacto@sendu.com" },
+    { text: "Teléfono", url: "tel:+1234567890" },
+    { text: "Soporte", url: "#" }
+  ],
+  moreLinks: [
+    { text: "Sendu", url: "https://sendu.com" },
+    { text: "Próximamente", url: "#" }
+  ]
+};
+
+const existingFooterConfig = db.prepare('SELECT value FROM settings WHERE key = ?').get('footer_config');
+if (!existingFooterConfig) {
+  db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run('footer_config', JSON.stringify(defaultFooterConfig));
+}
+
 // Garantizar columnas nuevas cuando se usa una base previa sin migraciones
 const ensureColumn = (tableName, columnName, definition) => {
   const columns = db.prepare(`PRAGMA table_info(${tableName})`).all();
@@ -91,8 +135,44 @@ const ensureColumn = (tableName, columnName, definition) => {
 
 ensureColumn('files', 'userId', 'userId TEXT');
 ensureColumn('users', 'role', "role TEXT DEFAULT 'user'");
+ensureColumn('users', 'resetToken', 'resetToken TEXT');
+ensureColumn('users', 'resetTokenExpires', 'resetTokenExpires INTEGER');
 
 // --- Middlewares ---
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com", "https://cdn.jsdelivr.net"],
+      scriptSrcAttr: ["'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'"],
+      objectSrc: ["'none'"],
+    },
+  },
+}));
+
+// Rate Limiters
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 10, // Límite de 10 intentos por IP
+  message: { message: 'Demasiados intentos de inicio de sesión, por favor intente más tarde.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const uploadLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 100, // Límite de 100 subidas por IP por hora
+  message: { message: 'Límite de subidas excedido, por favor espere.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api/upload', uploadLimiter);
+
 app.use(cors({
   origin: true,
   credentials: true
@@ -204,12 +284,35 @@ const upload = multer({
   limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE || 10737418240) } // 10GB por defecto
 }).single('file'); // 'file' debe coincidir con el nombre del campo en FormData
 
+// Configuración de Multer para Branding
+const brandingStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, BRANDING_PATH);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const name = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '-');
+    cb(null, `${name}-${Date.now()}${ext}`);
+  }
+});
+const uploadBranding = multer({ 
+    storage: brandingStorage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Solo se permiten imágenes.'));
+        }
+    }
+}).single('file');
+
 // --- RUTAS DE API ---
 
 // --- AUTH ENDPOINTS ---
 
 // POST /api/auth/register - Registrar nuevo usuario
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', authLimiter, async (req, res) => {
   try {
     const { email, username, password } = req.body;
 
@@ -259,7 +362,7 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 // POST /api/auth/login - Iniciar sesión
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
     const { emailOrUsername, password } = req.body;
 
@@ -307,6 +410,89 @@ app.post('/api/auth/logout', (req, res) => {
   });
 });
 
+// Configuración de Nodemailer
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.example.com',
+  port: parseInt(process.env.SMTP_PORT || '587'),
+  secure: process.env.SMTP_SECURE === 'true',
+  auth: {
+    user: process.env.SMTP_USER || 'user',
+    pass: process.env.SMTP_PASS || 'pass'
+  }
+});
+
+// POST /api/auth/forgot-password
+app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: 'Email requerido.' });
+
+    const user = db.prepare('SELECT id, username FROM users WHERE email = ?').get(email);
+    if (!user) {
+      return res.json({ message: 'Si el email existe, se enviará un enlace de recuperación.' });
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = Date.now() + 3600000; // 1 hora
+
+    db.prepare('UPDATE users SET resetToken = ?, resetTokenExpires = ? WHERE id = ?')
+      .run(token, expires, user.id);
+
+    const resetLink = `${req.protocol}://${req.get('host')}/reset-password?token=${token}`;
+
+    if (!process.env.SMTP_HOST) {
+      console.log(`[DEV] Reset Link para ${email}: ${resetLink}`);
+      return res.json({ message: 'Si el email existe, se enviará un enlace de recuperación. (Revisa la consola del servidor en modo DEV)' });
+    }
+
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || '"Sendu" <noreply@sendu.local>',
+      to: email,
+      subject: 'Recuperación de contraseña - Sendu',
+      html: `<p>Hola ${user.username},</p>
+             <p>Has solicitado restablecer tu contraseña.</p>
+             <p>Haz clic en el siguiente enlace para continuar:</p>
+             <a href="${resetLink}">${resetLink}</a>
+             <p>Este enlace expira en 1 hora.</p>`
+    });
+
+    res.json({ message: 'Si el email existe, se enviará un enlace de recuperación.' });
+
+  } catch (err) {
+    console.error('Error en forgot-password:', err);
+    res.status(500).json({ message: 'Error del servidor.' });
+  }
+});
+
+// POST /api/auth/reset-password
+app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) return res.status(400).json({ message: 'Token y nueva contraseña requeridos.' });
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: 'La contraseña debe tener al menos 8 caracteres.' });
+    }
+
+    const user = db.prepare('SELECT id FROM users WHERE resetToken = ? AND resetTokenExpires > ?').get(token, Date.now());
+
+    if (!user) {
+      return res.status(400).json({ message: 'Token inválido o expirado.' });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    db.prepare('UPDATE users SET passwordHash = ?, resetToken = NULL, resetTokenExpires = NULL WHERE id = ?')
+      .run(passwordHash, user.id);
+
+    res.json({ message: 'Contraseña restablecida con éxito. Ahora puedes iniciar sesión.' });
+
+  } catch (err) {
+    console.error('Error en reset-password:', err);
+    res.status(500).json({ message: 'Error del servidor.' });
+  }
+});
+
 // GET /api/auth/me - Obtener usuario actual
 app.get('/api/auth/me', (req, res) => {
   if (!req.session.userId) {
@@ -319,7 +505,17 @@ app.get('/api/auth/me', (req, res) => {
     return res.status(404).json({ message: 'Usuario no encontrado.' });
   }
 
+  // Calcular uso de almacenamiento
+  const storageUsed = db.prepare('SELECT SUM(size) as total FROM files WHERE userId = ?').get(user.id).total || 0;
+  user.storageUsed = storageUsed;
+  user.storageLimit = 100 * 1024 * 1024 * 1024; // 100GB
+
   res.json({ user });
+});
+
+// GET /health - Healthcheck para Cloudflare/Docker
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: Date.now() });
 });
 
 // --- ADMIN ENDPOINTS ---
@@ -404,6 +600,73 @@ app.patch('/api/admin/users/:id/role', requireAdmin, (req, res) => {
     res.json({ message: `Rol de ${user.username} actualizado a ${role}.` });
   } catch (err) {
     console.error('Error cambiando rol:', err);
+    res.status(500).json({ message: 'Error del servidor.' });
+  }
+});
+
+// PUT /api/admin/users/:id - Actualizar usuario completo (admin)
+app.put('/api/admin/users/:id', requireAdmin, (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { email, username, role } = req.body;
+
+    if (!email && !username && !role) {
+      return res.status(400).json({ message: 'No hay datos para actualizar.' });
+    }
+
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Usuario no encontrado.' });
+    }
+
+    const updates = [];
+    const params = [];
+
+    if (email && email !== user.email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ message: 'Email inválido.' });
+        }
+        const existing = db.prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(email, userId);
+        if (existing) return res.status(409).json({ message: 'Email ya en uso.' });
+        
+        updates.push('email = ?');
+        params.push(email);
+    }
+
+    if (username && username !== user.username) {
+        if (username.length < 3) return res.status(400).json({ message: 'Usuario muy corto.' });
+        const existing = db.prepare('SELECT id FROM users WHERE username = ? AND id != ?').get(username, userId);
+        if (existing) return res.status(409).json({ message: 'Usuario ya en uso.' });
+
+        updates.push('username = ?');
+        params.push(username);
+    }
+
+    if (role && role !== user.role) {
+        if (!['user', 'admin'].includes(role)) return res.status(400).json({ message: 'Rol inválido.' });
+        
+        if (userId === req.session.userId && role === 'user') {
+             const adminCount = db.prepare('SELECT COUNT(*) as count FROM users WHERE role = ?').get('admin').count;
+             if (adminCount <= 1) return res.status(400).json({ message: 'No puedes quitarte admin si eres el único.' });
+        }
+        
+        updates.push('role = ?');
+        params.push(role);
+    }
+
+    if (updates.length === 0) {
+        return res.json({ message: 'Sin cambios.' });
+    }
+
+    params.push(userId);
+    const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
+    db.prepare(sql).run(...params);
+
+    res.json({ message: 'Usuario actualizado correctamente.' });
+
+  } catch (err) {
+    console.error('Error actualizando usuario:', err);
     res.status(500).json({ message: 'Error del servidor.' });
   }
 });
@@ -598,6 +861,60 @@ app.get('/api/admin/analytics', requireAdmin, (req, res) => {
     console.error('Error obteniendo analíticas:', err);
     res.status(500).json({ message: 'Error del servidor.' });
   }
+});
+
+// GET /api/settings/footer - Obtener configuración del footer (público)
+app.get('/api/settings/footer', (req, res) => {
+  try {
+    const config = db.prepare('SELECT value FROM settings WHERE key = ?').get('footer_config');
+    if (config) {
+      res.json(JSON.parse(config.value));
+    } else {
+      // Fallback si no existe en DB (aunque debería por la inicialización)
+      res.json({});
+    }
+  } catch (err) {
+    console.error('Error obteniendo configuración del footer:', err);
+    res.status(500).json({ message: 'Error del servidor.' });
+  }
+});
+
+// PUT /api/admin/settings/footer - Actualizar configuración del footer (admin)
+app.put('/api/admin/settings/footer', requireAdmin, (req, res) => {
+  try {
+    const newConfig = req.body;
+    
+    // Validación básica
+    if (!newConfig || typeof newConfig !== 'object') {
+      return res.status(400).json({ message: 'Configuración inválida.' });
+    }
+
+    db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('footer_config', JSON.stringify(newConfig));
+    
+    res.json({ message: 'Configuración del footer actualizada correctamente.' });
+  } catch (err) {
+    console.error('Error actualizando configuración del footer:', err);
+    res.status(500).json({ message: 'Error del servidor.' });
+  }
+});
+
+// POST /api/admin/settings/branding/upload - Subir logo para branding (admin)
+app.post('/api/admin/settings/branding/upload', requireAdmin, (req, res) => {
+  uploadBranding(req, res, (err) => {
+    if (err) {
+      console.error('Error en subida de branding:', err);
+      return res.status(400).json({ message: err.message });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'No se ha proporcionado ningún archivo.' });
+    }
+
+    // Devolver la URL pública
+    // La carpeta BRANDING_PATH se sirve en /branding
+    const url = `/branding/${req.file.filename}`;
+    res.json({ url });
+  });
 });
 
 // --- USER ENDPOINTS ---
@@ -879,15 +1196,25 @@ app.post('/api/upload', detectOrigin, (req, res) => {
 // --- CHUNKED UPLOAD ENDPOINTS ---
 
 // POST /api/upload/init - inicia una subida por chunks
-app.post('/api/upload/init', (req, res) => {
+app.post('/api/upload/init', async (req, res) => {
   try {
     const { fileName, size, mimeType, expires, maxDownloads, password } = req.body || {};
     if (!fileName || !size) {
       return res.status(400).json({ message: 'fileName y size son obligatorios.' });
     }
 
+    // Verificar cuota de usuario (100GB)
+    if (req.session.userId) {
+      const USER_QUOTA = 100 * 1024 * 1024 * 1024; // 100GB
+      const currentUsage = db.prepare('SELECT SUM(size) as total FROM files WHERE userId = ?').get(req.session.userId).total || 0;
+      
+      if (currentUsage + Number(size) > USER_QUOTA) {
+        return res.status(413).json({ message: 'Has excedido tu cuota de almacenamiento de 100GB.' });
+      }
+    }
+
     const uploadId = uuidv4();
-    const chunkSize = 30 * 1024 * 1024; // 30MB
+    const chunkSize = 10 * 1024 * 1024; // 10MB (Optimizado para Cloudflare Free Tier)
     const totalChunks = Math.ceil(Number(size) / chunkSize);
 
     const dir = path.join(CHUNKS_PATH, uploadId);
@@ -955,7 +1282,7 @@ app.post('/api/upload/chunk', (req, res) => {
   }
 });
 
-// GET /api/upload/status?uploadId=...
+// GET /api/upload/status
 app.get('/api/upload/status', (req, res) => {
   try {
     const { uploadId } = req.query;
@@ -1087,6 +1414,7 @@ app.get('/api/meta/:id', (req, res) => {
       fileName: file.originalName,
       size: file.size,
       requiresPassword: !!file.passwordHash,
+      mimeType: file.mimeType, // Enviar mimeType para previews
       // Opcional: enviar cuándo expira o cuántas descargas quedan
       expiresAt: file.expiresAt,
       downloadsLeft: file.maxDownloads ? file.maxDownloads - file.downloadCount : null
@@ -1095,6 +1423,38 @@ app.get('/api/meta/:id', (req, res) => {
   } catch (err) {
     console.error('Error al obtener metadata:', err);
     res.status(500).json({ message: 'Error del servidor.' });
+  }
+});
+
+// GET /api/preview/:id - Obtener vista previa de imagen
+app.get('/api/preview/:id', (req, res) => {
+  try {
+    const stmt = db.prepare('SELECT * FROM files WHERE id = ?');
+    const file = stmt.get(req.params.id);
+
+    if (!file) {
+      return res.status(404).send('Archivo no encontrado');
+    }
+
+    // Solo permitir imágenes
+    if (!file.mimeType.startsWith('image/')) {
+      return res.status(400).send('Vista previa no disponible');
+    }
+
+    // Comprobar si el archivo existe
+    if (!fs.existsSync(file.serverPath)) {
+      return res.status(404).send('Archivo físico no encontrado');
+    }
+
+    // Servir el archivo
+    res.setHeader('Content-Type', file.mimeType);
+    // Cachear por 1 hora
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    fs.createReadStream(file.serverPath).pipe(res);
+
+  } catch (err) {
+    console.error('Error en preview:', err);
+    res.status(500).send('Error del servidor');
   }
 });
 
@@ -1183,6 +1543,80 @@ app.delete('/api/files/:id', (req, res) => {
   }
 });
 
+// POST /api/report/:fileId - Reportar un archivo
+app.post('/api/report/:fileId', (req, res) => {
+  try {
+    const { reason } = req.body;
+    const fileId = req.params.id; // Corregido: req.params.fileId no existe en la ruta definida como :fileId.
+    // Express mapea :fileId a req.params.fileId.
+    // Corrección: usar req.params.fileId
+    
+    if (!reason) {
+      return res.status(400).json({ message: 'El motivo es obligatorio.' });
+    }
+
+    const file = db.prepare('SELECT id FROM files WHERE id = ?').get(req.params.fileId);
+    if (!file) {
+      return res.status(404).json({ message: 'Archivo no encontrado.' });
+    }
+
+    const reportId = uuidv4();
+    db.prepare('INSERT INTO reports (id, fileId, reason, createdAt) VALUES (?, ?, ?, ?)').run(reportId, req.params.fileId, reason, Date.now());
+
+    res.json({ message: 'Reporte enviado correctamente.' });
+  } catch (err) {
+    console.error('Error enviando reporte:', err);
+    res.status(500).json({ message: 'Error del servidor.' });
+  }
+});
+
+// GET /api/admin/reports - Obtener reportes (admin)
+app.get('/api/admin/reports', requireAdmin, (req, res) => {
+  try {
+    const reports = db.prepare(`
+      SELECT r.id, r.reason, r.createdAt, r.status, f.id as fileId, f.originalName, f.size
+      FROM reports r
+      LEFT JOIN files f ON r.fileId = f.id
+      ORDER BY r.createdAt DESC
+    `).all();
+    res.json({ reports });
+  } catch (err) {
+    console.error('Error obteniendo reportes:', err);
+    res.status(500).json({ message: 'Error del servidor.' });
+  }
+});
+
+// POST /api/admin/reports/:id/resolve - Resolver reporte (admin)
+app.post('/api/admin/reports/:id/resolve', requireAdmin, (req, res) => {
+  try {
+    const { action } = req.body; // 'dismiss' o 'delete_file'
+    const reportId = req.params.id;
+
+    const report = db.prepare('SELECT * FROM reports WHERE id = ?').get(reportId);
+    if (!report) return res.status(404).json({ message: 'Reporte no encontrado.' });
+
+    if (action === 'delete_file') {
+      const file = db.prepare('SELECT * FROM files WHERE id = ?').get(report.fileId);
+      if (file) {
+        if (fs.existsSync(file.serverPath)) {
+          try { fs.unlinkSync(file.serverPath); } catch(e) {}
+        }
+        db.prepare('DELETE FROM files WHERE id = ?').run(file.id);
+      }
+      db.prepare('UPDATE reports SET status = ? WHERE id = ?').run('resolved_deleted', reportId);
+      // También marcar otros reportes del mismo archivo como resueltos
+      db.prepare('UPDATE reports SET status = ? WHERE fileId = ? AND id != ?').run('resolved_deleted', report.fileId, reportId);
+    } else {
+      db.prepare('UPDATE reports SET status = ? WHERE id = ?').run('dismissed', reportId);
+    }
+
+    res.json({ message: 'Reporte gestionado.' });
+  } catch (err) {
+    console.error('Error resolviendo reporte:', err);
+    res.status(500).json({ message: 'Error del servidor.' });
+  }
+});
+
 // --- Servir Frontend ---
 
 // Servir la página de descarga
@@ -1197,6 +1631,7 @@ app.use(express.static(FRONTEND_PATH));
 
 // Servir assets estáticos (logos, favicons)
 app.use('/assets', express.static(path.join(__dirname, '../assets')));
+app.use('/branding', express.static(BRANDING_PATH));
 
 // Compatibilidad: muchos navegadores solicitan /favicon.ico en la raíz
 // Redirigimos a nuestro favicon SVG si no existe un .ico físico
@@ -1224,10 +1659,19 @@ function cleanupExpiredFiles() {
       console.log(`🧹 Limpiando ${filesToClean.length} archivo(s) expirado(s) o con límite de descargas alcanzado...`);
       
       filesToClean.forEach(file => {
+        // Seguridad: Verificar que el archivo esté dentro de STORAGE_PATH
+        const safePath = path.resolve(file.serverPath);
+        const storageRoot = path.resolve(STORAGE_PATH);
+        
+        if (!safePath.startsWith(storageRoot)) {
+          console.error(`🚨 ALERTA DE SEGURIDAD: Intento de eliminar archivo fuera de uploads: ${file.serverPath}`);
+          return;
+        }
+
         // Eliminar archivo físico
-        if (fs.existsSync(file.serverPath)) {
+        if (fs.existsSync(safePath)) {
           try {
-            fs.unlinkSync(file.serverPath);
+            fs.unlinkSync(safePath);
             console.log(`  ✅ Eliminado: ${file.originalName}`);
           } catch (err) {
             console.error(`  ❌ Error eliminando archivo ${file.serverPath}:`, err.message);
@@ -1254,7 +1698,7 @@ cleanupExpiredFiles();
 
 // --- Iniciar Servidor ---
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`CloudBox Share corriendo en http://0.0.0.0:${PORT}`);
+  console.log(`Sendu corriendo en http://0.0.0.0:${PORT}`);
   console.log(`Almacenamiento en: ${STORAGE_PATH}`);
   console.log(`Base de datos en: ${DB_PATH}`);
   console.log(`--- Orígenes configurados ---`);

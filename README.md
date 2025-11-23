@@ -1,101 +1,56 @@
-CloudBox ShareBienvenido a CloudBox Share, un servicio web minimalista y auto-hospedado para compartir archivos, inspirado en Pingvin Share.Está diseñado para ser ligero, fácil de desplegar en tu propio servidor (como un Ubuntu Server) y ofrece una UI moderna estilo "Glassmorphism" con detección inteligente de contexto LAN/WAN para generar los enlaces de descarga.Características PrincipalesAlmacenamiento 100% Local: Los archivos se guardan directamente en el filesystem de tu servidor. Sin S3, sin nubes de terceros.UI Moderna (Glassmorphism): Interfaz limpia con efectos de desenfoque y transparencia, construida con Tailwind CSS.Detección de Contexto (LAN/WAN): Genera automáticamente un enlace de descarga usando tu IP local (http://192...) si accedes desde tu red local, o tu dominio público (https://share...) si accedes desde internet.Enlaces Seguros:Protección con contraseña.Expiración por tiempo (ej. 24 horas).Expiración por número de descargas (ej. 1 sola descarga).Interfaz Sencilla: Soporta Drag & Drop, muestra una barra de progreso y permite copiar el enlace al portapapeles.Backend Ligero: Construido con Node.js, Express y SQLite para una persistencia simple y sin dependencias pesadas.Optimizado para Proxy Inverso: Funciona perfectamente detrás de Nginx, Caddy o túneles de Cloudflare, detectando la IP real del visitante.1. Instalación en Ubuntu ServerEstos pasos asumen que tienes un servidor Ubuntu (22.04+ recomendado) con nodejs (v18+) y npm instalados.a. Clonar el Repositoriogit clone <URL_DEL_REPOSITORIO> cloudbox-share
-cd cloudbox-share
-b. Instalar Dependenciasnpm install --production
-# --production omite las dependencias de desarrollo (como 'jest')
-c. Configurar el EntornoCrea tu archivo de configuración .env a partir del ejemplo:cp .env.example .env
-Ahora, edita el archivo .env (nano .env) y define tus variables. Esta es la parte más importante.# Puerto en el que correrá el servidor Node.js
-PORT=3000
+# Sendu
 
-# TU DOMINIO PÚBLICO (IMPORTANTE: USA HTTPS)
-# El navegador no permitirá copiar al portapapeles desde un sitio no seguro (http).
-PUBLIC_ORIGIN=[https://share.midominio.com](https://share.midominio.com)
+Sendu es una plataforma web diseñada para compartir archivos de manera sencilla y segura. El objetivo de este proyecto es ofrecer una alternativa privada y autoalojable a los grandes servicios de transferencia de archivos, permitiendo a los usuarios mantener el control sobre sus datos.
 
-# TU IP/HOST LOCAL + PUERTO
-# Cómo accedes al servidor desde tu LAN.
-LOCAL_ORIGIN=[http://192.168.1.100:3000](http://192.168.1.100:3000)
+## ¿En qué consiste?
 
-# RUTA DE ALMACENAMIENTO (ABSOLUTA RECOMENDADA)
-# Asegúrate de que el usuario que corre Node tenga permisos
-# sudo mkdir -p /server/cloudbox-share/data
-# sudo chown -R tu-usuario:tu-usuario /server/cloudbox-share
-STORAGE_PATH=/server/cloudbox-share/data
+La aplicación permite a cualquier usuario (registrado o anónimo, dependiendo de la configuración) subir archivos al servidor. Una vez subido el archivo, se genera un enlace único que puede ser compartido.
 
-# CAMBIA ESTO por una frase larga y aleatoria
-PASSWORD_SECRET=esta-es-una-frase-secreta-muy-larga-y-aleatoria
+Lo que hace especial a Sendu es el control que ofrece sobre estos enlaces:
+- **Caducidad temporal:** Puedes decidir cuánto tiempo estará disponible el archivo (por ejemplo, 1 día, 1 semana).
+- **Límite de descargas:** Puedes configurar el archivo para que se elimine automáticamente después de haber sido descargado un número específico de veces.
+- **Protección con contraseña:** Si el archivo es sensible, puedes asignarle una contraseña que será requerida para descargarlo.
 
-# Tamaño máximo de archivo en bytes (ej. 10GB)
-MAX_FILE_SIZE=10737418240
-d. Crear Directorios y PermisosAsegúrate de que la ruta que definiste en STORAGE_PATH exista y tenga los permisos correctos.# Ejemplo si usaste la ruta recomendada:
-sudo mkdir -p /server/cloudbox-share/data
-# Asumiendo que corres el servicio como 'mi-usuario'
-sudo chown -R mi-usuario:mi-usuario /server/cloudbox-share
-2. Ejecutar la AplicaciónPuedes iniciar el servidor directamente:npm start
-# O para desarrollo: npm run dev
-Usar PM2 para Producción (Recomendado)Para que el servidor se mantenga corriendo y se reinicie automáticamente, usa pm2.# Instalar PM2 globalmente
-sudo npm install pm2 -g
+## Funcionalidades Principales
 
-# Iniciar la aplicación con PM2
-pm2 start npm --name "cloudbox-share" -- start
+### Para los Usuarios
+- Interfaz limpia y moderna con soporte para temas claro y oscuro.
+- Panel de control personal donde pueden ver y gestionar todos los archivos que han subido.
+- Posibilidad de eliminar sus propios archivos antes de que expiren.
+- Sistema de recuperación de contraseña mediante correo electrónico.
 
-# Guardar la configuración para que se inicie al reiniciar el servidor
-pm2 save
-pm2 startup
-Tu aplicación ahora está corriendo en http://localhost:3000.3. Configuración de Proxy Inverso (Nginx/Caddy)¡No expongas el puerto 3000 directamente a Internet! Usa un proxy inverso para manejar HTTPS y enviar el tráfico a tu aplicación.La clave es que el proxy debe enviar los headers Host y X-Forwarded-For para que la detección LAN/WAN funcione.Ejemplo con Nginx# /etc/nginx/sites-available/share.midominio.com
+### Para los Administradores
+- Panel de administración completo.
+- Vista general de estadísticas: uso de disco, usuarios totales, descargas activas.
+- Gestión de usuarios: ver quién está registrado y gestionar sus permisos.
+- Gestión de archivos: supervisar qué contenido se está compartiendo en la plataforma.
+- Personalización: capacidad de editar la información del pie de página (textos, enlaces, logos) directamente desde el panel, sin tocar código.
 
-server {
-    listen 80;
-    server_name share.midominio.com;
+## Aspectos Técnicos
 
-    # Redirigir a HTTPS (Certbot se encarga de esto usualmente)
-    location / {
-        return 301 https://$host$request_uri;
-    }
-}
+El proyecto está construido buscando la simplicidad y el rendimiento:
 
-server {
-    listen 443 ssl http2;
-    server_name share.midominio.com;
+- **Backend:** Utiliza Node.js con Express. Es ligero y maneja las subidas de archivos grandes mediante un sistema de fragmentos (chunks), lo que asegura que la subida sea estable incluso con conexiones lentas.
+- **Base de Datos:** Usa SQLite. Esto significa que no necesitas configurar un servidor de base de datos complejo como MySQL o PostgreSQL. Todo se guarda en un archivo local, lo que facilita enormemente la instalación y las copias de seguridad.
+- **Frontend:** Está construido con HTML, JavaScript nativo y Tailwind CSS. No requiere procesos de compilación complejos para el desarrollo básico.
 
-    # Rutas a tus certificados SSL (provistos por Certbot)
-    ssl_certificate /etc/letsencrypt/live/[share.midominio.com/fullchain.pem](https://share.midominio.com/fullchain.pem);
-    ssl_certificate_key /etc/letsencrypt/live/[share.midominio.com/privkey.pem](https://share.midominio.com/privkey.pem);
+## Instalación y Puesta en Marcha
 
-    location / {
-        proxy_pass http://localhost:3000; # Apunta a tu app Node.js
-        
-        # --- Headers Críticos ---
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        # ------------------------
+Para ejecutar este proyecto en tu entorno local:
 
-        # Para soportar la barra de progreso (deshabilitar buffering)
-        proxy_buffering off;
-        
-        # Aumentar el tamaño máximo de subida (debe coincidir o superar MAX_FILE_SIZE)
-    client_max_body_size 10G;
-    }
-}
-Ejemplo con Caddy (Más simple)Caddy maneja HTTPS automáticamente.# Caddyfile
+1. Asegúrate de tener Node.js instalado.
+2. Abre una terminal en la carpeta del proyecto.
+3. Instala las dependencias necesarias ejecutando el comando:
+   `npm install`
+4. Inicia el servidor:
+   `npm start`
+   
+   O si prefieres el modo de desarrollo:
+   `node backend/server.js`
 
-share.midominio.com {
-    # Aumentar límite de subida
-    request_body {
-        max_size 500m
-    }
-    
-    # Hacer proxy a la app Node.js
-    reverse_proxy localhost:3000 {
-        # Caddy envía los headers correctos por defecto
-        # (incl. Host y X-Forwarded-For)
-    }
-}
-4. Tarea de Limpieza (Cron Job)El proyecto incluye un script en scripts/cleanup.js que elimina archivos expirados (por tiempo o por límite de descargas). Debes programarlo para que se ejecute periódicamente.Configurar un Cron JobAbre tu editor de crontab:crontab -e
-Añade una línea para ejecutar el script. Este ejemplo lo corre cada hora.IMPORTANTE: Reemplaza /ruta/completa/a/tu/proyecto y /ruta/a/node (puedes encontrarla con which node).# Ejecutar el script de limpieza de CloudBox Share cada hora
-0 * * * * /usr/bin/node /home/mi-usuario/cloudbox-share/scripts/cleanup.js >> /var/log/cloudbox_cleanup.log 2>&1
-0 * * * *: Se ejecuta en el minuto 0 de cada hora./usr/bin/node: Ruta absoluta a Node.js./home/mi-usuario/cloudbox-share/...: Ruta absoluta al script.>> ... 2>&1: Redirige la salida (stdout y stderr) a un archivo de log.5. Pruebas (Opcional)Si descargaste las dependencias de desarrollo, puedes correr las pruebas:# Instalar dependencias de desarrollo
-npm install
+5. Abre tu navegador y visita `http://localhost:3000`.
 
-# Correr las pruebas (asegúrate que el servidor esté corriendo en localhost:3000)
-npm test
+La base de datos se creará automáticamente la primera vez que inicies la aplicación.
+
+---
+Creado con el objetivo de simplificar el intercambio de archivos.

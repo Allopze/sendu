@@ -1,0 +1,9 @@
+node_modules
+npm-debug.log
+uploads/*
+!uploads/.gitkeep
+db.sqlite
+sessions.sqlite
+.env
+.git
+.vscode

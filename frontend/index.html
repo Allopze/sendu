@@ -288,7 +288,7 @@
         }
 
         /* Logo por tema */
-        .brand-logo { width: 28px; height: 28px; display: none; }
+        .brand-logo { height: 55px; width: auto; display: none; object-fit: contain; max-width: 310px; }
         [data-theme="light"] .logo-light { display: inline-block; }
         [data-theme="light"] .logo-dark { display: none; }
         [data-theme="dark"] .logo-dark { display: inline-block; }
@@ -677,8 +677,8 @@
         }
 
         .footer-logo-icon {
-            width: 36px;
-            height: 36px;
+            height: 52px;
+            width: auto;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -687,9 +687,10 @@
         }
 
         .footer-logo-icon img {
-            width: 100%;
+            width: auto;
             height: 100%;
             object-fit: contain;
+            max-width: 260px;
         }
 
         .footer-tagline {
@@ -785,6 +786,13 @@
             color: white;
         }
 
+        /* Branding Loading State */
+        .branding-loading {
+            opacity: 0 !important;
+            visibility: hidden !important;
+            transition: opacity 0.2s ease;
+        }
+
         /* Ajustes de layout por navbar fija */
         body {
             padding-top: 1.5rem;
@@ -799,7 +807,7 @@
 </head>
 <body class="dark:bg-slate-900 dark:text-slate-200 light:bg-gray-50 light:text-gray-800 overflow-x-hidden transition-colors duration-300">
     <!-- Notificación global -->
-    <div id="global-notification" class="fixed inset-x-0 top-4 z-50 flex justify-center px-4 pointer-events-none hidden">
+    <div id="global-notification" class="fixed inset-x-0 top-4 z-50 justify-center px-4 pointer-events-none hidden">
         <div id="global-notification-content" class="max-w-lg w-full px-4 py-3 rounded-lg shadow-lg text-sm font-medium text-white text-center bg-slate-800/90 backdrop-blur"></div>
     </div>
 
@@ -807,12 +815,12 @@
     <nav class="fixed top-0 left-0 right-0 z-50 glass-container px-6 py-3 flex items-center justify-between">
         <!-- Logo y nombre -->
         <a id="home-link" class="flex items-center gap-3 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded-lg px-1" aria-label="Ir al inicio de Sendu" href="/">
-            <div class="w-9 h-9 flex items-center justify-center">
-                <img src="/assets/branding/sendu-light.svg" alt="Sendu" class="brand-logo logo-light" width="28" height="28">
-                <img src="/assets/branding/sendu-dark.svg" alt="Sendu" class="brand-logo logo-dark" width="28" height="28">
+            <div class="flex items-center justify-center">
+                <img src="/assets/branding/sendu-light.svg" alt="Sendu" class="brand-logo logo-light branding-loading">
+                <img src="/assets/branding/sendu-dark.svg" alt="Sendu" class="brand-logo logo-dark branding-loading">
             </div>
             <div>
-                <h1 class="text-lg font-bold text-white dark:text-white light:text-gray-800">Sendu</h1>
+                <h1 id="header-brand-name" class="text-lg font-bold text-white dark:text-white light:text-gray-800 branding-loading">Sendu</h1>
             </div>
         </a>
         
@@ -837,7 +845,7 @@
     </nav>
 
     <!-- Contenedor principal -->
-    <div id="app-container" class="min-h-screen w-full flex items-center justify-center p-4 pt-18 transition-all duration-300">
+    <div id="app-container" class="min-h-screen w-full flex items-center justify-center p-4 pt-24 transition-all duration-300">
         <!-- El contenido de la vista se inyecta dinámicamente -->
     </div>
 
@@ -958,6 +966,10 @@
 
             <!-- Info Archivo -->
             <div class="bg-white/10 dark:bg-white/10 light:bg-blue-50 p-6 rounded-xl text-center">
+                <!-- Preview Container -->
+                <div id="file-preview-container" class="hidden mb-4 justify-center">
+                    <img id="file-preview-img" src="" alt="Vista previa" class="max-h-64 rounded-lg shadow-lg object-contain">
+                </div>
                 <p id="file-name" class="font-semibold text-2xl text-white dark:text-white light:text-gray-800 break-words mb-2">nombre_archivo.zip</p>
                 <p id="file-size" class="text-lg text-gray-200 dark:text-gray-200 light:text-gray-600">12.3 MB</p>
             </div>
@@ -983,6 +995,50 @@
 
             <!-- Mensaje de Error -->
             <div id="download-error-message" class="hidden bg-red-500/50 text-white p-3 rounded-lg text-center"></div>
+
+            <!-- Reportar abuso -->
+            <div class="text-center pt-4">
+                <button id="report-file-btn" class="text-xs text-gray-400 hover:text-red-400 underline transition-colors">
+                    Reportar contenido inapropiado
+                </button>
+            </div>
+        </div>
+    </template>
+
+    <!-- Template para modal de reporte -->
+    <template id="report-modal-template">
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" id="report-modal-overlay">
+            <div class="w-full max-w-md glass-container p-6 m-4 animate-in slide-in-from-top-4 duration-500">
+                <h3 class="text-xl font-bold text-red-500 mb-4">Reportar Archivo</h3>
+                <p class="text-sm dark:text-gray-300 light:text-gray-700 mb-4">
+                    Por favor, indícanos por qué este archivo debe ser eliminado.
+                </p>
+                <form id="report-form" class="space-y-4">
+                    <textarea 
+                        id="report-reason" 
+                        rows="3" 
+                        placeholder="Describe el problema (ej. contenido ilegal, malware, copyright...)"
+                        class="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800 text-sm resize-none"
+                        required
+                    ></textarea>
+                    <div id="report-error" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm"></div>
+                    <div class="flex gap-3">
+                        <button 
+                            type="button"
+                            id="cancel-report-btn"
+                            class="btn-outline flex-1 justify-center"
+                        >
+                            Cancelar
+                        </button>
+                        <button 
+                            type="submit"
+                            class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                        >
+                            Enviar Reporte
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </template>
 
@@ -1012,6 +1068,10 @@
                         class="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
                         placeholder="Tu contraseña"
                     >
+                </div>
+
+                <div class="flex items-center justify-end mb-2">
+                    <a href="#" id="goto-forgot-password" class="text-sm text-red-500 hover:text-red-400 font-medium">¿Olvidaste tu contraseña?</a>
                 </div>
 
                 <div id="login-error" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm"></div>
@@ -1098,6 +1158,72 @@
         </div>
     </template>
 
+    <!-- Template para recuperar contraseña -->
+    <template id="forgot-password-view-template">
+        <div class="w-full max-w-md glass-container p-8 animate-in slide-in-from-top-4 duration-500">
+            <h2 class="text-2xl font-bold text-center mb-6 dark:text-white light:text-gray-800">Recuperar Contraseña</h2>
+            <p class="text-sm text-center mb-6 dark:text-gray-300 light:text-gray-600">Ingresa tu email y te enviaremos un enlace para restablecer tu contraseña.</p>
+            
+            <form id="forgot-password-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2 dark:text-gray-300 light:text-gray-700">Email</label>
+                    <input 
+                        type="email" 
+                        id="forgot-email" 
+                        required
+                        class="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
+                        placeholder="email@ejemplo.com"
+                    >
+                </div>
+
+                <div id="forgot-message" class="hidden p-3 bg-green-500/20 border border-green-500 rounded-lg text-green-400 text-sm"></div>
+                <div id="forgot-error" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm"></div>
+
+                <button 
+                    type="submit"
+                    class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors"
+                >
+                    Enviar Enlace
+                </button>
+            </form>
+
+            <div class="mt-6 text-center">
+                <a href="#" id="back-to-login-from-forgot" class="text-sm text-red-500 hover:text-red-400 font-medium">Volver al inicio de sesión</a>
+            </div>
+        </div>
+    </template>
+
+    <!-- Template para restablecer contraseña -->
+    <template id="reset-password-view-template">
+        <div class="w-full max-w-md glass-container p-8 animate-in slide-in-from-top-4 duration-500">
+            <h2 class="text-2xl font-bold text-center mb-6 dark:text-white light:text-gray-800">Restablecer Contraseña</h2>
+            
+            <form id="reset-password-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2 dark:text-gray-300 light:text-gray-700">Nueva Contraseña</label>
+                    <input 
+                        type="password" 
+                        id="reset-new-password" 
+                        required
+                        minlength="8"
+                        class="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800"
+                        placeholder="Mínimo 8 caracteres"
+                    >
+                </div>
+
+                <div id="reset-message" class="hidden p-3 bg-green-500/20 border border-green-500 rounded-lg text-green-400 text-sm"></div>
+                <div id="reset-error" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm"></div>
+
+                <button 
+                    type="submit"
+                    class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors"
+                >
+                    Cambiar Contraseña
+                </button>
+            </form>
+        </div>
+    </template>
+
     <!-- Template para dashboard del usuario -->
     <template id="dashboard-view-template">
         <div class="w-full max-w-6xl glass-container p-8 animate-in slide-in-from-top-4 duration-500 space-y-8">
@@ -1129,6 +1255,15 @@
 
             <!-- Resumen rápido -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="p-4 bg-white/5 dark:bg-slate-800/30 light:bg-gray-100/60 rounded-lg border border-gray-300 dark:border-slate-700 col-span-1 sm:col-span-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <p class="text-xs uppercase tracking-wide text-gray-400">Almacenamiento</p>
+                        <p id="storage-text" class="text-xs text-gray-400">0 GB / 100 GB</p>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-2.5 dark:bg-gray-700 light:bg-gray-300">
+                        <div id="storage-bar" class="bg-red-600 h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
                 <div class="p-4 bg-white/5 dark:bg-slate-800/30 light:bg-gray-100/60 rounded-lg border border-gray-300 dark:border-slate-700">
                     <p class="text-xs uppercase tracking-wide text-gray-400">Archivos subidos</p>
                     <p id="dashboard-file-count" class="text-2xl font-semibold mt-2 dark:text-white light:text-gray-800">0</p>
@@ -1277,6 +1412,14 @@
                     <button class="admin-tab" data-tab="files">
                         <i data-lucide="folder" style="width: 16px; height: 16px;"></i>
                         Archivos
+                    </button>
+                    <button class="admin-tab" data-tab="branding">
+                        <i data-lucide="palette" style="width: 16px; height: 16px;"></i>
+                        Marca y Footer
+                    </button>
+                    <button class="admin-tab" data-tab="reports">
+                        <i data-lucide="flag" style="width: 16px; height: 16px;"></i>
+                        Reportes
                     </button>
                 </div>
             </div>
@@ -1430,6 +1573,142 @@
         </div>
     </template>
 
+    <!-- Template: Branding Settings Tab -->
+    <template id="admin-branding-tab">
+        <div class="glass-container p-6 space-y-6">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold dark:text-white light:text-gray-800 flex items-center gap-2">
+                    <i data-lucide="palette" style="width: 20px; height: 20px;"></i>
+                    Personalización de Marca
+                </h3>
+                <button id="save-branding-btn" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-2">
+                    <i data-lucide="save" style="width: 16px; height: 16px;"></i>
+                    Guardar Cambios
+                </button>
+            </div>
+
+            <form id="branding-settings-form" class="space-y-6">
+                <!-- Marca -->
+                <div class="space-y-4">
+                    <h4 class="text-md font-medium text-gray-300 dark:text-gray-300 light:text-gray-700 border-b border-gray-700 pb-2">Identidad de Marca (Header y Footer)</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2 dark:text-gray-400 light:text-gray-600">Nombre de la Marca (General)</label>
+                            <input type="text" id="branding-brand-input" class="w-full px-4 py-2 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2 dark:text-gray-400 light:text-gray-600">Slogan / Tagline (Footer)</label>
+                            <input type="text" id="branding-tagline-input" class="w-full px-4 py-2 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800">
+                            <div class="mt-3">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" id="branding-hide-footer-name" class="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500">
+                                    <span class="text-sm font-medium dark:text-gray-300 light:text-gray-700">Ocultar nombre en el Footer</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Configuración específica del Header -->
+                        <div class="md:col-span-2 border-t border-gray-700 pt-4 mt-2">
+                            <h5 class="text-sm font-medium text-gray-300 dark:text-gray-300 light:text-gray-700 mb-3">Opciones del Header</h5>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2 dark:text-gray-400 light:text-gray-600">Nombre en el Header (Opcional)</label>
+                                    <input type="text" id="branding-header-name-input" placeholder="Dejar vacío para usar el nombre general" class="w-full px-4 py-2 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800">
+                                </div>
+                                <div class="flex items-center h-full pt-6">
+                                    <label class="flex items-center gap-3 cursor-pointer">
+                                        <input type="checkbox" id="branding-hide-header-name" class="w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-500">
+                                        <span class="text-sm font-medium dark:text-gray-300 light:text-gray-700">Ocultar nombre en el Header</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-2 dark:text-gray-400 light:text-gray-600">URL Logo (Claro)</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="branding-logo-light-input" class="flex-1 px-4 py-2 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800">
+                                <input type="file" id="branding-logo-light-file" class="hidden" accept="image/*">
+                                <button type="button" id="upload-logo-light-btn" class="px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors" title="Subir imagen">
+                                    <i data-lucide="upload" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2 dark:text-gray-400 light:text-gray-600">URL Logo (Oscuro)</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="branding-logo-dark-input" class="flex-1 px-4 py-2 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800">
+                                <input type="file" id="branding-logo-dark-file" class="hidden" accept="image/*">
+                                <button type="button" id="upload-logo-dark-btn" class="px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors" title="Subir imagen">
+                                    <i data-lucide="upload" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Enlaces de Contacto -->
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between border-b border-gray-700 pb-2">
+                        <h4 class="text-md font-medium text-gray-300 dark:text-gray-300 light:text-gray-700">Enlaces de Contacto</h4>
+                        <button type="button" id="add-contact-link-btn" class="text-xs bg-white/10 hover:bg-white/20 px-2 py-1 rounded text-white">
+                            + Agregar
+                        </button>
+                    </div>
+                    <div id="contact-links-container" class="space-y-3">
+                        <!-- Items dinámicos -->
+                    </div>
+                </div>
+
+                <!-- Enlaces "Más de nosotros" -->
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between border-b border-gray-700 pb-2">
+                        <h4 class="text-md font-medium text-gray-300 dark:text-gray-300 light:text-gray-700">Enlaces "Más de nosotros"</h4>
+                        <button type="button" id="add-more-link-btn" class="text-xs bg-white/10 hover:bg-white/20 px-2 py-1 rounded text-white">
+                            + Agregar
+                        </button>
+                    </div>
+                    <div id="more-links-container" class="space-y-3">
+                        <!-- Items dinámicos -->
+                    </div>
+                </div>
+            </form>
+        </div>
+    </template>
+
+    <!-- Template: Reports Tab -->
+    <template id="admin-reports-tab">
+        <div class="glass-container p-6 space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <h3 class="text-lg font-semibold dark:text-white light:text-gray-800 flex items-center gap-2">
+                    <i data-lucide="flag" style="width: 20px; height: 20px;"></i>
+                    Reportes de Abuso
+                </h3>
+                <button id="refresh-reports-btn" class="btn-outline">
+                    <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i>
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-300 dark:border-slate-700">
+                            <th class="text-left py-3 px-2 dark:text-gray-300 light:text-gray-700">Fecha</th>
+                            <th class="text-left py-3 px-2 dark:text-gray-300 light:text-gray-700">Archivo</th>
+                            <th class="text-left py-3 px-2 dark:text-gray-300 light:text-gray-700">Motivo</th>
+                            <th class="text-left py-3 px-2 dark:text-gray-300 light:text-gray-700">Estado</th>
+                            <th class="text-left py-3 px-2 dark:text-gray-300 light:text-gray-700">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reports-table-body">
+                        <tr>
+                            <td colspan="5" class="text-center py-4 dark:text-gray-400 light:text-gray-600">Cargando...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </template>
+
     <!-- Template para modal de confirmación de eliminación de cuenta -->
     <template id="delete-account-modal-template">
         <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" id="delete-modal-overlay">
@@ -1442,7 +1721,7 @@
                     <li>Tu cuenta de usuario</li>
                     <li>Todos tus archivos subidos</li>
                     <li>Todos los enlaces de descarga</li>
-                </ul>
+                </li>
                 <p class="text-sm dark:text-gray-300 light:text-gray-700 mb-4">
                     Por favor, ingresa tu contraseña para confirmar:
                 </p>
@@ -1469,6 +1748,38 @@
                         >
                             Sí, eliminar mi cuenta
                         </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </template>
+
+    <!-- Template para modal de edición de usuario (Admin) -->
+    <template id="edit-user-modal-template">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" id="edit-user-modal-overlay">
+            <div class="w-full max-w-md glass-container p-6 m-4 animate-in slide-in-from-top-4 duration-500">
+                <h3 class="text-xl font-bold dark:text-white light:text-gray-800 mb-4">Editar Usuario</h3>
+                <form id="edit-user-form" class="space-y-4">
+                    <input type="hidden" id="edit-user-id">
+                    <div>
+                        <label class="block text-sm font-medium mb-2 dark:text-gray-300 light:text-gray-700">Usuario</label>
+                        <input type="text" id="edit-user-username" class="w-full px-4 py-2 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800" required minlength="3">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2 dark:text-gray-300 light:text-gray-700">Email</label>
+                        <input type="email" id="edit-user-email" class="w-full px-4 py-2 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2 dark:text-gray-300 light:text-gray-700">Rol</label>
+                        <select id="edit-user-role" class="w-full px-4 py-2 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800">
+                            <option value="user">Usuario</option>
+                            <option value="admin">Administrador</option>
+                        </select>
+                    </div>
+                    <div id="edit-user-error" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm"></div>
+                    <div class="flex gap-3 pt-2">
+                        <button type="button" id="cancel-edit-user-btn" class="btn-outline flex-1 justify-center">Cancelar</button>
+                        <button type="submit" class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">Guardar</button>
                     </div>
                 </form>
             </div>
@@ -1517,6 +1828,12 @@
             const appContainer = document.getElementById('app-container');
             const notificationWrapper = document.getElementById('global-notification');
             const notificationContent = document.getElementById('global-notification-content');
+
+            const initIcons = () => {
+                if (window.lucide && window.lucide.createIcons) {
+                    window.lucide.createIcons();
+                }
+            };
             let notificationTimeoutId;
             const LAST_VIEW_KEY = 'sendu:lastView';
             let currentUser = null;
@@ -1553,6 +1870,7 @@
             };
 
             function renderRoute(pathname) {
+                console.log('Rendering route:', pathname);
                 const path = normalizePath(pathname);
 
                 if (path.startsWith('/share/')) {
@@ -1574,6 +1892,12 @@
                             postAuthRedirect = '/dashboard';
                             loadLoginView();
                         }
+                        break;
+                    case '/forgot-password':
+                        loadForgotPasswordView();
+                        break;
+                    case '/reset-password':
+                        loadResetPasswordView();
                         break;
                     case '/admin':
                         if (currentUser && currentUser.role === 'admin') {
@@ -1612,6 +1936,7 @@
             }
 
             function navigateTo(path, { replace = false } = {}) {
+                console.log('Navigating to:', path);
                 const target = normalizePath(path);
                 const current = normalizePath(window.location.pathname);
 
@@ -1627,6 +1952,9 @@
             window.addEventListener('popstate', () => {
                 renderRoute(window.location.pathname);
             });
+
+            // Expose navigateTo to global scope for inline onclick handlers
+            window.navigateTo = navigateTo;
 
             function showNotification(message, type = 'info', duration = 4000) {
                 if (!notificationWrapper || !notificationContent || !message) return;
@@ -1644,11 +1972,13 @@
                 notificationContent.className = `${baseClasses.join(' ')} ${palette[type] || palette.info}`;
                 notificationContent.textContent = message;
                 notificationWrapper.classList.remove('hidden');
+                notificationWrapper.classList.add('flex');
 
                 clearTimeout(notificationTimeoutId);
                 if (duration > 0) {
                     notificationTimeoutId = setTimeout(() => {
                         notificationWrapper.classList.add('hidden');
+                        notificationWrapper.classList.remove('flex');
                     }, duration);
                 }
             }
@@ -1799,6 +2129,102 @@
                 setTimeout(() => form.remove(), 2000);
             };
 
+            // --- Funciones de Autenticación ---
+            async function checkAuthStatus() {
+                try {
+                    const res = await fetch('/api/auth/me');
+                    if (res.ok) {
+                        const data = await res.json();
+                        currentUser = data.user;
+                    } else {
+                        currentUser = null;
+                    }
+                } catch (err) {
+                    console.error('Error checking auth status:', err);
+                    currentUser = null;
+                } finally {
+                    updateUserMenu();
+                }
+            }
+
+            function updateUserMenu() {
+                const container = document.getElementById('user-dropdown');
+                if (!container) return;
+
+                if (currentUser) {
+                    container.innerHTML = `
+                        <div class="user-info">
+                            <div class="user-info-name">${currentUser.username}</div>
+                            <div class="user-info-email">${currentUser.email}</div>
+                        </div>
+                        <a href="#" onclick="navigateTo('/dashboard'); return false;" class="user-dropdown-item">
+                            <i data-lucide="layout-dashboard" style="width: 16px; height: 16px;"></i>
+                            Dashboard
+                        </a>
+                        <a href="#" onclick="navigateTo('/settings'); return false;" class="user-dropdown-item">
+                            <i data-lucide="settings" style="width: 16px; height: 16px;"></i>
+                            Configuración
+                        </a>
+                        ${currentUser.role === 'admin' ? `
+                        <a href="#" onclick="navigateTo('/admin'); return false;" class="user-dropdown-item">
+                            <i data-lucide="shield" style="width: 16px; height: 16px;"></i>
+                            Admin Panel
+                        </a>
+                        ` : ''}
+                        <div class="user-dropdown-divider"></div>
+                        <a href="#" id="logout-btn" class="user-dropdown-item text-red-400 hover:text-red-300">
+                            <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
+                            Cerrar Sesión
+                        </a>
+                    `;
+
+                    const logoutBtn = document.getElementById('logout-btn');
+                    if (logoutBtn) {
+                        logoutBtn.addEventListener('click', async (e) => {
+                            e.preventDefault();
+                            try {
+                                await fetch('/api/auth/logout', { method: 'POST' });
+                                currentUser = null;
+                                updateUserMenu();
+                                showNotification('Sesión cerrada', 'success');
+                                navigateTo('/');
+                            } catch (err) {
+                                console.error('Error logging out:', err);
+                            }
+                        });
+                    }
+                } else {
+                    container.innerHTML = `
+                        <a href="#" onclick="navigateTo('/login'); return false;" class="user-dropdown-item">
+                            <i data-lucide="log-in" style="width: 16px; height: 16px;"></i>
+                            Iniciar Sesión
+                        </a>
+                        <a href="#" onclick="navigateTo('/register'); return false;" class="user-dropdown-item">
+                            <i data-lucide="user-plus" style="width: 16px; height: 16px;"></i>
+                            Registrarse
+                        </a>
+                    `;
+                }
+                initIcons();
+            }
+
+            // Toggle User Menu
+            const userMenuBtn = document.getElementById('user-menu-btn');
+            const userDropdown = document.getElementById('user-dropdown');
+            
+            if (userMenuBtn && userDropdown) {
+                userMenuBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    userDropdown.classList.toggle('show');
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (!userDropdown.contains(e.target) && !userMenuBtn.contains(e.target)) {
+                        userDropdown.classList.remove('show');
+                    }
+                });
+            }
+
             // --- Cargar Vistas ---
             function loadUploadView() {
                 postAuthRedirect = null;
@@ -1816,714 +2242,905 @@
                 initDownloadListeners(fileId);
             }
 
-            // --- Lógica de Subida (Upload) ---
+            function loadAdminView() {
+                rememberLastView('admin');
+                const template = document.getElementById('admin-view-template').content.cloneNode(true);
+                appContainer.innerHTML = '';
+                appContainer.appendChild(template);
+
+                document.getElementById('back-to-dashboard-admin').addEventListener('click', () => navigateTo('/dashboard'));
+
+                const tabs = document.querySelectorAll('.admin-tab');
+                const contentContainer = document.getElementById('admin-tab-content');
+
+                function loadTab(tabName) {
+                    // Update active tab
+                    tabs.forEach(t => {
+                        if (t.dataset.tab === tabName) t.classList.add('active');
+                        else t.classList.remove('active');
+                    });
+
+                    // Load content
+                    const tabTemplate = document.getElementById(`admin-${tabName}-tab`);
+                    if (tabTemplate) {
+                        contentContainer.innerHTML = '';
+                        contentContainer.appendChild(tabTemplate.content.cloneNode(true));
+                        
+                        // Init specific tab logic
+                        if (tabName === 'dashboard') initAdminDashboard();
+                        if (tabName === 'users') initAdminUsers();
+                        if (tabName === 'files') initAdminFiles();
+                        if (tabName === 'branding') initAdminBranding();
+                        if (tabName === 'reports') initAdminReports();
+                        
+                        initIcons();
+                    }
+                }
+
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        loadTab(tab.dataset.tab);
+                    });
+                });
+
+                // Load default tab
+                loadTab('dashboard');
+            }
+
+            async function initAdminDashboard() {
+                try {
+                    const res = await fetch('/api/admin/stats');
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    
+                    document.getElementById('dash-total-users').textContent = data.stats.totalUsers;
+                    document.getElementById('dash-total-files').textContent = data.stats.totalFiles;
+                    document.getElementById('dash-total-downloads').textContent = data.stats.totalDownloads;
+
+                    // Top Files
+                    const topFilesList = document.getElementById('top-files-list');
+                    if (data.recentFiles) {
+                        topFilesList.innerHTML = data.recentFiles.map(f => `
+                            <div class="flex justify-between text-sm p-2 bg-white/5 rounded">
+                                <span class="truncate flex-1">${f.originalName}</span>
+                                <span class="text-gray-400">${f.downloadCount} descargas</span>
+                            </div>
+                        `).join('');
+                    }
+
+                    // Top Users
+                    const topUsersList = document.getElementById('top-users-list');
+                    if (data.users) {
+                         topUsersList.innerHTML = data.users.slice(0, 5).map(u => `
+                            <div class="flex justify-between text-sm p-2 bg-white/5 rounded">
+                                <span>${u.username}</span>
+                                <span class="text-gray-400">${new Date(u.createdAt).toLocaleDateString()}</span>
+                            </div>
+                        `).join('');
+                    }
+
+                } catch (err) {
+                    console.error('Error loading admin dashboard:', err);
+                }
+            }
+
+            async function initAdminUsers() {
+                const tbody = document.getElementById('users-table-body');
+                const refreshBtn = document.getElementById('refresh-users-btn');
+                
+                async function load() {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4">Cargando...</td></tr>';
+                    try {
+                        const res = await fetch('/api/admin/users');
+                        const data = await res.json();
+                        
+                        if (!res.ok) throw new Error(data.message);
+                        
+                        tbody.innerHTML = data.users.map(u => `
+                            <tr class="border-b border-gray-700 hover:bg-white/5">
+                                <td class="py-3 px-2 text-left align-middle">${u.username}</td>
+                                <td class="py-3 px-2 text-left align-middle">${u.email}</td>
+                                <td class="py-3 px-2 text-left align-middle">
+                                    <span class="px-2 py-1 rounded text-xs ${u.role === 'admin' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}">
+                                        ${u.role}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-2 text-left align-middle">${u.fileCount}</td>
+                                <td class="py-3 px-2 text-left align-middle">${u.totalDownloads}</td>
+                                <td class="py-3 px-2 text-left align-middle">${new Date(u.createdAt).toLocaleDateString()}</td>
+                                <td class="py-3 px-2 text-left align-middle">
+                                    <div class="flex gap-2">
+                                        <button class="text-blue-400 hover:text-blue-300 edit-user-btn" 
+                                            data-id="${u.id}" 
+                                            data-username="${u.username}" 
+                                            data-email="${u.email}" 
+                                            data-role="${u.role}"
+                                            title="Editar usuario">
+                                            <i data-lucide="edit-2" class="w-4 h-4"></i>
+                                        </button>
+                                        <button class="text-red-400 hover:text-red-300 delete-user-btn" data-id="${u.id}" title="Eliminar usuario">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('');
+                        
+                        // Edit listeners
+                        tbody.querySelectorAll('.edit-user-btn').forEach(btn => {
+                            btn.addEventListener('click', () => {
+                                const { id, username, email, role } = btn.dataset;
+                                openEditUserModal(id, username, email, role, load);
+                            });
+                        });
+                        
+                        // Add event listeners for delete buttons
+                        tbody.querySelectorAll('.delete-user-btn').forEach(btn => {
+                            btn.addEventListener('click', async () => {
+                                const confirmed = await showConfirmDialog({
+                                    title: 'Eliminar Usuario',
+                                    message: '¿Estás seguro de que deseas eliminar este usuario? Esta acción no se puede deshacer.',
+                                    confirmText: 'Sí, eliminar',
+                                    tone: 'danger'
+                                });
+                                if(confirmed) {
+                                    await fetch(`/api/admin/users/${btn.dataset.id}`, { method: 'DELETE' });
+                                    load();
+                                }
+                            });
+                        });
+                        
+                        initIcons();
+                    } catch (err) {
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-red-400">Error al cargar</td></tr>';
+                    }
+                }
+                
+                refreshBtn.addEventListener('click', load);
+                load();
+            }
+
+            function openEditUserModal(id, username, email, role, onSuccess) {
+                const template = document.getElementById('edit-user-modal-template').content.cloneNode(true);
+                document.body.appendChild(template);
+                
+                const overlay = document.getElementById('edit-user-modal-overlay');
+                const form = document.getElementById('edit-user-form');
+                const cancelBtn = document.getElementById('cancel-edit-user-btn');
+                const errorEl = document.getElementById('edit-user-error');
+                
+                document.getElementById('edit-user-id').value = id;
+                document.getElementById('edit-user-username').value = username;
+                document.getElementById('edit-user-email').value = email;
+                document.getElementById('edit-user-role').value = role;
+                
+                const close = () => overlay.remove();
+                
+                cancelBtn.onclick = close;
+                overlay.onclick = (e) => { if(e.target === overlay) close(); };
+                
+                form.onsubmit = async (e) => {
+                    e.preventDefault();
+                    const newUsername = document.getElementById('edit-user-username').value;
+                    const newEmail = document.getElementById('edit-user-email').value;
+                    const newRole = document.getElementById('edit-user-role').value;
+                    
+                    try {
+                        const res = await fetch(`/api/admin/users/${id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ username: newUsername, email: newEmail, role: newRole })
+                        });
+                        
+                        const data = await res.json();
+                        
+                        if (res.ok) {
+                            showNotification('Usuario actualizado', 'success');
+                            close();
+                            if (onSuccess) onSuccess();
+                        } else {
+                            errorEl.textContent = data.message;
+                            errorEl.classList.remove('hidden');
+                        }
+                    } catch (err) {
+                        errorEl.textContent = 'Error de conexión';
+                        errorEl.classList.remove('hidden');
+                    }
+                };
+            }
+
+
+            async function initAdminFiles() {
+                const tbody = document.getElementById('files-table-body');
+                const refreshBtn = document.getElementById('refresh-files-btn');
+                const searchInput = document.getElementById('search-files-input');
+                
+                async function load() {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4">Cargando...</td></tr>';
+                    try {
+                        const search = searchInput.value;
+                        const res = await fetch(`/api/admin/files?search=${encodeURIComponent(search)}`);
+                        const data = await res.json();
+                        
+                        if (!res.ok) throw new Error(data.message);
+                        
+                        tbody.innerHTML = data.files.map(f => `
+                            <tr class="border-b border-gray-300 dark:border-slate-700 hover:bg-white/5">
+                                <td class="py-3 px-2 max-w-[200px] truncate" title="${f.originalName}">${f.originalName}</td>
+                                <td class="py-3 px-2">${f.username || 'Anónimo'}</td>
+                                <td class="py-3 px-2">${formatBytes(f.size)}</td>
+                                <td class="py-3 px-2">${f.downloadCount}</td>
+                                <td class="py-3 px-2">${new Date(f.createdAt).toLocaleDateString()}</td>
+                                <td class="py-3 px-2">
+                                    <button class="text-red-400 hover:text-red-300 delete-file-btn" data-id="${f.id}">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('');
+                        
+                        tbody.querySelectorAll('.delete-file-btn').forEach(btn => {
+                            btn.addEventListener('click', async () => {
+                                const confirmed = await showConfirmDialog({
+                                    title: 'Eliminar Archivo',
+                                    message: '¿Estás seguro de que deseas eliminar este archivo permanentemente?',
+                                    confirmText: 'Eliminar',
+                                    tone: 'danger'
+                                });
+                                if(confirmed) {
+                                    await fetch(`/api/admin/files/${btn.dataset.id}`, { method: 'DELETE' });
+                                    load();
+                                }
+                            });
+                        });
+                        
+                        initIcons();
+                    } catch (err) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-red-400">Error al cargar</td></tr>';
+                    }
+                }
+                
+                refreshBtn.addEventListener('click', load);
+                searchInput.addEventListener('change', load);
+                load();
+            }
+
+            async function initAdminBranding() {
+                const form = document.getElementById('branding-settings-form');
+                const saveBtn = document.getElementById('save-branding-btn');
+                
+                // Setup upload buttons
+                const setupUpload = (btnId, fileId, inputId) => {
+                    const btn = document.getElementById(btnId);
+                    const fileInput = document.getElementById(fileId);
+                    const urlInput = document.getElementById(inputId);
+                    
+                    if (!btn || !fileInput || !urlInput) return;
+
+                    btn.addEventListener('click', () => fileInput.click());
+                    
+                    fileInput.addEventListener('change', async () => {
+                        if (fileInput.files.length === 0) return;
+                        
+                        const file = fileInput.files[0];
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        
+                        // Show loading state
+                        const originalIcon = btn.innerHTML;
+                        btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>';
+                        btn.disabled = true;
+                        lucide.createIcons();
+                        
+                        try {
+                            const res = await fetch('/api/admin/settings/branding/upload', {
+                                method: 'POST',
+                                body: formData
+                            });
+                            
+                            const data = await res.json();
+                            
+                            if (res.ok) {
+                                urlInput.value = data.url;
+                                showNotification('Imagen subida correctamente', 'success');
+                            } else {
+                                showNotification(data.message || 'Error al subir imagen', 'error');
+                            }
+                        } catch (err) {
+                            showNotification('Error de conexión', 'error');
+                        } finally {
+                            btn.innerHTML = originalIcon;
+                            btn.disabled = false;
+                            fileInput.value = ''; // Reset
+                            lucide.createIcons();
+                        }
+                    });
+                };
+                
+                setupUpload('upload-logo-light-btn', 'branding-logo-light-file', 'branding-logo-light-input');
+                setupUpload('upload-logo-dark-btn', 'branding-logo-dark-file', 'branding-logo-dark-input');
+
+                // Load current settings
+                try {
+                    const res = await fetch('/api/settings/footer');
+                    const config = await res.json();
+                    
+                    document.getElementById('branding-brand-input').value = config.brandName || '';
+                    document.getElementById('branding-tagline-input').value = config.tagline || '';
+                    document.getElementById('branding-hide-footer-name').checked = !!config.hideFooterName;
+                    document.getElementById('branding-header-name-input').value = config.headerBrandName || '';
+                    document.getElementById('branding-hide-header-name').checked = !!config.hideHeaderName;
+                    document.getElementById('branding-logo-light-input').value = config.logoLight || '';
+                    document.getElementById('branding-logo-dark-input').value = config.logoDark || '';
+                    
+                    // Helper to render link inputs
+                    const renderLinkInputs = (containerId, links = []) => {
+                        const container = document.getElementById(containerId);
+                        container.innerHTML = '';
+                        links.forEach(link => addLinkInput(container, link));
+                    };
+                    
+                    const addLinkInput = (container, link = { text: '', url: '' }) => {
+                        const div = document.createElement('div');
+                        div.className = 'flex gap-2 items-center';
+                        div.innerHTML = `
+                            <input type="text" placeholder="Texto" value="${link.text}" class="flex-1 px-3 py-2 rounded bg-white/10 border border-gray-700 text-sm">
+                            <input type="text" placeholder="URL" value="${link.url}" class="flex-1 px-3 py-2 rounded bg-white/10 border border-gray-700 text-sm">
+                            <button type="button" class="text-red-400 hover:text-red-300 remove-link-btn">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        `;
+                        div.querySelector('.remove-link-btn').addEventListener('click', () => div.remove());
+                        container.appendChild(div);
+                        lucide.createIcons();
+                    };
+                    
+                    renderLinkInputs('contact-links-container', config.contactLinks);
+                    renderLinkInputs('more-links-container', config.moreLinks);
+                    
+                    document.getElementById('add-contact-link-btn').addEventListener('click', () => {
+                        addLinkInput(document.getElementById('contact-links-container'));
+                    });
+                    
+                    document.getElementById('add-more-link-btn').addEventListener('click', () => {
+                        addLinkInput(document.getElementById('more-links-container'));
+                    });
+                    
+                } catch (err) {
+                    console.error('Error loading footer settings', err);
+                }
+                
+                saveBtn.addEventListener('click', async () => {
+                    const getLinks = (containerId) => {
+                        const container = document.getElementById(containerId);
+                        return Array.from(container.children).map(div => {
+                            const inputs = div.querySelectorAll('input');
+                            return { text: inputs[0].value, url: inputs[1].value };
+                        }).filter(l => l.text && l.url);
+                    };
+                    
+                    const newConfig = {
+                        brandName: document.getElementById('branding-brand-input').value,
+                        tagline: document.getElementById('branding-tagline-input').value,
+                        hideFooterName: document.getElementById('branding-hide-footer-name').checked,
+                        headerBrandName: document.getElementById('branding-header-name-input').value,
+                        hideHeaderName: document.getElementById('branding-hide-header-name').checked,
+                        logoLight: document.getElementById('branding-logo-light-input').value,
+                        logoDark: document.getElementById('branding-logo-dark-input').value,
+                        contactLinks: getLinks('contact-links-container'),
+                        moreLinks: getLinks('more-links-container')
+                    };
+                    
+                    try {
+                        await fetch('/api/admin/settings/footer', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(newConfig)
+                        });
+                        showNotification('Configuración guardada', 'success');
+                    } catch (err) {
+                        showNotification('Error al guardar', 'error');
+                    }
+                });
+            }
+
+            // --- Lógica de Reportes (Admin) ---
+            async function initAdminReports() {
+                const tableBody = document.getElementById('reports-table-body');
+                const refreshBtn = document.getElementById('refresh-reports-btn');
+
+                async function loadReports() {
+                    tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 dark:text-gray-400 light:text-gray-600">Cargando...</td></tr>';
+                    
+                    try {
+                        const res = await fetch('/api/admin/reports');
+                        if (!res.ok) throw new Error('Error al cargar reportes');
+                        
+                        const data = await res.json();
+                        const reports = data.reports || [];
+                        
+                        if (reports.length === 0) {
+                            tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 dark:text-gray-400 light:text-gray-600">No hay reportes pendientes.</td></tr>';
+                            return;
+                        }
+                        
+                        tableBody.innerHTML = '';
+                        reports.forEach(report => {
+                            const row = document.createElement('tr');
+                            row.className = 'border-b border-gray-300 dark:border-slate-700 hover:bg-white/5 transition-colors';
+                            
+                            const statusColors = {
+                                'pending': 'text-yellow-500',
+                                'resolved': 'text-green-500',
+                                'dismissed': 'text-gray-500'
+                            };
+                            
+                            const statusLabels = {
+                                'pending': 'Pendiente',
+                                'resolved': 'Resuelto',
+                                'dismissed': 'Descartado'
+                            };
+
+                            row.innerHTML = `
+                                <td class="py-3 px-2 dark:text-gray-300 light:text-gray-700">${new Date(report.createdAt).toLocaleDateString()}</td>
+                                <td class="py-3 px-2 dark:text-gray-300 light:text-gray-700">
+                                    <a href="/share/${report.fileId}" target="_blank" class="text-blue-400 hover:underline truncate block max-w-[150px]">
+                                        ${report.fileName || 'Archivo eliminado'}
+                                    </a>
+                                </td>
+                                <td class="py-3 px-2 dark:text-gray-300 light:text-gray-700 max-w-[200px] truncate" title="${report.reason}">${report.reason}</td>
+                                <td class="py-3 px-2 font-medium ${statusColors[report.status] || 'text-gray-500'}">
+                                    ${statusLabels[report.status] || report.status}
+                                </td>
+                                <td class="py-3 px-2">
+                                    <div class="flex gap-2">
+                                        ${report.status === 'pending' ? `
+                                            <button class="resolve-btn p-1.5 bg-red-600/20 text-red-400 hover:bg-red-600/30 rounded" title="Eliminar archivo y resolver">
+                                                <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+                                            </button>
+                                            <button class="dismiss-btn p-1.5 bg-gray-600/20 text-gray-400 hover:bg-gray-600/30 rounded" title="Descartar reporte">
+                                                <i data-lucide="x-circle" style="width: 16px; height: 16px;"></i>
+                                            </button>
+                                        ` : '<span class="text-xs text-gray-500">-</span>'}
+                                    </div>
+                                </td>
+                            `;
+                            
+                            // Actions
+                            if (report.status === 'pending') {
+                                row.querySelector('.resolve-btn').addEventListener('click', async () => {
+                                    const confirmed = await showConfirmDialog({
+                                        title: 'Resolver Reporte',
+                                        message: 'Esto eliminará el archivo permanentemente y marcará el reporte como resuelto. ¿Continuar?',
+                                        confirmText: 'Sí, eliminar y resolver',
+                                        tone: 'danger'
+                                    });
+                                    
+                                    if (confirmed) {
+                                        try {
+                                            const res = await fetch(`/api/admin/reports/${report.id}/resolve`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ action: 'delete_file' })
+                                            });
+                                            
+                                            if (res.ok) {
+                                                showNotification('Reporte resuelto y archivo eliminado', 'success');
+                                                loadReports();
+                                            } else {
+                                                showNotification('Error al resolver reporte', 'error');
+                                            }
+                                        } catch (err) {
+                                            showNotification('Error de conexión', 'error');
+                                        }
+                                    }
+                                });
+                                
+                                row.querySelector('.dismiss-btn').addEventListener('click', async () => {
+                                    const confirmed = await showConfirmDialog({
+                                        title: 'Descartar Reporte',
+                                        message: 'El archivo se mantendrá y el reporte se marcará como descartado. ¿Continuar?',
+                                        confirmText: 'Sí, descartar',
+                                        tone: 'neutral'
+                                    });
+                                    
+                                    if (confirmed) {
+                                        try {
+                                            const res = await fetch(`/api/admin/reports/${report.id}/resolve`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ action: 'dismiss' })
+                                            });
+                                            
+                                            if (res.ok) {
+                                                showNotification('Reporte descartado', 'success');
+                                                loadReports();
+                                            } else {
+                                                showNotification('Error al descartar reporte', 'error');
+                                            }
+                                        } catch (err) {
+                                            showNotification('Error de conexión', 'error');
+                                        }
+                                    }
+                                });
+                            }
+                            
+                            tableBody.appendChild(row);
+                        });
+                        lucide.createIcons();
+                        
+                    } catch (err) {
+                        console.error(err);
+                        tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-red-400">Error al cargar datos.</td></tr>';
+                    }
+                }
+                
+                refreshBtn.addEventListener('click', loadReports);
+                loadReports();
+            }
+
+            // --- Funciones de Inicialización de Vistas ---
             function initUploadListeners() {
                 const dropZone = document.getElementById('drop-zone');
                 const fileInput = document.getElementById('file-input');
-                const dropOverlay = document.getElementById('drop-overlay');
-                const uploadForm = document.getElementById('upload-form');
                 const uploadOptions = document.getElementById('upload-options');
                 const startUploadBtn = document.getElementById('start-upload');
-                const expiresInput = document.getElementById('expires');
+                const uploadList = document.getElementById('upload-list');
+                const dropOverlay = document.getElementById('drop-overlay');
+                const dropMainText = document.getElementById('drop-main-text');
+                const dropSubText = document.getElementById('drop-sub-text');
+                
                 let selectedFile = null;
 
-                if (!dropZone) return;
-
-                if (expiresInput) {
-                    expiresInput.addEventListener('input', () => {
-                        const sanitized = expiresInput.value.replace(/\D+/g, '');
-                        expiresInput.value = sanitized;
-                    });
-                }
-
-                // Prevenir comportamientos por defecto
+                // Drag & Drop
                 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                     dropZone.addEventListener(eventName, preventDefaults, false);
-                    document.body.addEventListener(eventName, preventDefaults, false);
                 });
 
-                // Resaltar al arrastrar
+                function preventDefaults(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+
                 ['dragenter', 'dragover'].forEach(eventName => {
-                    dropZone.addEventListener(eventName, () => dropOverlay.style.opacity = '1', false);
+                    dropZone.addEventListener(eventName, highlight, false);
                 });
 
                 ['dragleave', 'drop'].forEach(eventName => {
-                    dropZone.addEventListener(eventName, () => dropOverlay.style.opacity = '0', false);
+                    dropZone.addEventListener(eventName, unhighlight, false);
                 });
 
-                // Manejar archivos soltados
-                dropZone.addEventListener('drop', (e) => {
+                function highlight(e) {
+                    dropOverlay.classList.remove('opacity-0');
+                    dropOverlay.classList.add('opacity-100');
+                }
+
+                function unhighlight(e) {
+                    dropOverlay.classList.remove('opacity-100');
+                    dropOverlay.classList.add('opacity-0');
+                }
+
+                dropZone.addEventListener('drop', handleDrop, false);
+
+                function handleDrop(e) {
                     const dt = e.dataTransfer;
                     const files = dt.files;
-                    if (files.length) {
-                        fileInput.files = files; // Asignar al input
-                        showUploadOptions(files[0]);
-                    }
-                }, false);
-
-                // Manejar selección de input
-                fileInput.addEventListener('change', () => {
-                    if (fileInput.files.length > 0) {
-                        showUploadOptions(fileInput.files[0]);
-                    }
-                });
-
-                // Mostrar opciones cuando se selecciona un archivo
-                function showUploadOptions(file) {
-                    selectedFile = file;
-                    
-                    // Actualizar la zona de drop para mostrar el archivo seleccionado
-                    const dropIcon = dropZone.querySelector('[data-lucide="upload-cloud"], [data-lucide="file-check"]');
-                    const mainText = dropZone.querySelector('#drop-main-text');
-                    const subText = dropZone.querySelector('#drop-sub-text');
-                    
-                    if (dropIcon) {
-                        dropIcon.setAttribute('data-lucide', 'file-check');
-                    }
-                    mainText.textContent = `Archivo seleccionado: ${file.name}`;
-                    subText.textContent = `${formatBytes(file.size)} • Haz clic para cambiar`;
-                    
-                    // Mostrar las opciones
-                    uploadOptions.classList.remove('hidden');
-                    
-                    // Refrescar iconos
-                    lucide.createIcons();
-                    
-                    // Scroll suave hacia las opciones
-                    uploadOptions.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    handleFiles(files);
                 }
 
-                // Botón de iniciar subida
-                startUploadBtn.addEventListener('click', async () => {
-                    if (!selectedFile) return;
+                fileInput.addEventListener('change', function() {
+                    handleFiles(this.files);
+                });
 
-                    const originalBtnContent = startUploadBtn.innerHTML;
-                    const mainText = dropZone.querySelector('#drop-main-text');
-                    const subText = dropZone.querySelector('#drop-sub-text');
-                    uploadOptions.classList.add('hidden');
-                    dropZone.classList.add('opacity-60', 'pointer-events-none');
-                    startUploadBtn.disabled = true;
-                    startUploadBtn.innerHTML = '<i data-lucide="loader-2" class="icon animate-spin"></i> Subiendo...';
-                    if (mainText && subText) {
-                        mainText.textContent = `Subiendo: ${selectedFile.name}`;
-                        subText.textContent = 'No cierres esta pestaña hasta finalizar.';
+                function handleFiles(files) {
+                    if (files.length > 0) {
+                        selectedFile = files[0];
+                        dropMainText.textContent = selectedFile.name;
+                        dropSubText.textContent = formatBytes(selectedFile.size);
+                        uploadOptions.classList.remove('hidden');
+                        
+                        // Scroll suave hacia las opciones
+                        setTimeout(() => {
+                            uploadOptions.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 100);
                     }
-                    lucide.createIcons();
+                }
 
-                    try {
-                        await handleFiles([selectedFile]);
-                    } catch (err) {
-                        console.error('Error global en subida:', err);
-                    } finally {
-                        startUploadBtn.disabled = false;
-                        startUploadBtn.innerHTML = originalBtnContent;
-                        dropZone.classList.remove('opacity-60', 'pointer-events-none');
-                        lucide.createIcons();
-                        resetDropZone();
+                startUploadBtn.addEventListener('click', () => {
+                    if (selectedFile) {
+                        uploadFile(selectedFile);
+                        // Reset UI
                         selectedFile = null;
+                        fileInput.value = '';
+                        dropMainText.textContent = 'Arrastra tu archivo aquí';
+                        dropSubText.textContent = 'o haz clic para seleccionar';
+                        uploadOptions.classList.add('hidden');
                     }
                 });
 
-                // Función para resetear la zona de drop
-                function resetDropZone() {
-                    const dropIcon = dropZone.querySelector('[data-lucide="file-check"], [data-lucide="upload-cloud"]');
-                    const mainText = dropZone.querySelector('#drop-main-text');
-                    const subText = dropZone.querySelector('#drop-sub-text');
-                    
-                    dropZone.classList.remove('opacity-60', 'pointer-events-none');
-                    uploadOptions.classList.add('hidden');
-                    selectedFile = null;
-                    fileInput.value = '';
+                async function uploadFile(file) {
+                    const password = document.getElementById('password').value;
+                    const expires = document.getElementById('expires').value;
+                    const maxDownloads = document.getElementById('maxDownloads').value;
 
-                    if (dropIcon) {
-                        dropIcon.setAttribute('data-lucide', 'upload-cloud');
-                    }
-                    if (mainText) mainText.textContent = 'Arrastra tu archivo aquí';
-                    if (subText) subText.textContent = 'o haz clic para seleccionar';
+                    // Crear elemento de progreso
+                    const template = document.getElementById('upload-item-template').content.cloneNode(true);
+                    const item = template.querySelector('.upload-item');
+                    const fileNameEl = item.querySelector('.file-name');
+                    const progressBar = item.querySelector('progress');
+                    const statusText = item.querySelector('.status-text');
+                    const speedText = item.querySelector('.speed-text');
+                    const resultLink = item.querySelector('.result-link');
+                    const linkInput = resultLink.querySelector('input');
+                    const copyBtn = resultLink.querySelector('.copy-button');
+                    const deleteBtn = resultLink.querySelector('.delete-upload-btn');
+                    const errorMessage = item.querySelector('.error-message');
+                    const cancelBtn = item.querySelector('.cancel-upload-btn');
 
-                    lucide.createIcons();
-                }
-            }
-            
-            function preventDefaults(e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
+                    fileNameEl.textContent = file.name;
+                    uploadList.prepend(item);
+                    initIcons();
 
-            async function handleFiles(files) {
-                return Promise.all([...files].map(file => uploadFile(file)));
-            }
-
-            async function uploadFile(file) {
-                const uploadList = document.getElementById('upload-list');
-                const template = document.getElementById('upload-item-template').content.cloneNode(true);
-                const item = template.querySelector('div[role="progressbar"]');
-                const fileNameEl = item.querySelector('.file-name');
-                const statusTextEl = item.querySelector('.status-text');
-                const progressEl = item.querySelector('progress');
-                const progressDetailEl = item.querySelector('.progress-detail');
-                const speedTextEl = item.querySelector('.speed-text');
-                const resultLinkEl = item.querySelector('.result-link');
-                const resultInput = item.querySelector('.result-link input');
-                const copyButton = item.querySelector('.copy-button');
-                const cancelBtn = item.querySelector('.cancel-upload-btn');
-                const deleteBtn = item.querySelector('.delete-upload-btn');
-                const errorEl = item.querySelector('.error-message');
-
-                fileNameEl.textContent = file.name;
-                uploadList.prepend(item);
-                
-                let uploadCancelled = false;
-                let uploadedFileId = null;
-                
-                // Mostrar botón de cancelar durante la subida
-                cancelBtn.classList.remove('hidden');
-                
-                // Manejar cancelación
-                cancelBtn.addEventListener('click', async () => {
-                    const confirmed = await showConfirmDialog({
-                        title: 'Cancelar subida',
-                        message: 'La transferencia se detendrá y tendrás que iniciar la carga desde cero.',
-                        confirmText: 'Sí, cancelar',
-                        cancelText: 'Continuar subiendo',
-                        tone: 'danger',
-                        icon: 'x-circle'
-                    });
-                    if (!confirmed) {
-                        return;
-                    }
-                    uploadCancelled = true;
-                    statusTextEl.textContent = 'Cancelado';
-                    statusTextEl.classList.add('text-red-400');
-                    progressDetailEl.textContent = 'Subida cancelada por el usuario';
-                    cancelBtn.classList.add('hidden');
-                    item.classList.add('opacity-60');
-                });
-                
-                // Scroll hacia el elemento de progreso
-                setTimeout(() => {
-                    item.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 100);
-                
-                // --- CHUNKED UPLOAD (30MB, paralelo) ---
-                const CHUNK_SIZE = 30 * 1024 * 1024; // 30MB
-                const CONCURRENCY = 4;
-                const startTime = Date.now();
-
-                const password = document.getElementById('password').value;
-                const expiresInput = document.getElementById('expires');
-                const expiresInputValue = expiresInput ? expiresInput.value.trim() : '';
-                const expiresDays = expiresInputValue === '' ? null : parseInt(expiresInputValue, 10);
-                const maxDownloads = document.getElementById('maxDownloads').value;
-                if (expiresInputValue !== '' && !Number.isInteger(expiresDays)) {
-                    errorEl.textContent = 'La expiración debe ser un número entero.';
-                    errorEl.classList.remove('hidden');
-                    return;
-                }
-                const expiresHours = (expiresDays !== null && expiresDays > 0) ? expiresDays * 24 : null;
-
-                try {
-                    console.log('🚀 Iniciando subida de archivo:', file.name, 'Tamaño:', file.size);
-                    statusTextEl.textContent = 'Inicializando...';
-                    progressDetailEl.textContent = 'Preparando subida...';
-                    progressEl.value = 0;
-                    progressEl.classList.remove('hidden');
-                    // 1) init
-                    const initRes = await fetch('/api/upload/init', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            fileName: file.name,
-                            size: file.size,
-                            mimeType: file.type || 'application/octet-stream',
-                            expires: expiresHours,
-                            maxDownloads: maxDownloads || null,
-                            password: password || null
-                        })
-                    });
-                    const initJson = await initRes.json();
-                    console.log('📋 Init response:', initJson);
-                    if (!initRes.ok) throw new Error(initJson.message || 'No se pudo iniciar la subida.');
-
-                    const uploadId = initJson.uploadId;
+                    // Lógica de subida por chunks
+                    const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB
                     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-                    let uploadedBytes = 0;
-                    let completedChunks = 0;
-                    console.log(`📦 Total chunks: ${totalChunks}, Chunk size: ${CHUNK_SIZE / 1024 / 1024}MB`);
+                    let uploadId = null;
+                    let isCancelled = false;
 
-                    // 2) subir chunks en paralelo
-                    const uploadChunk = async (i) => {
-                        if (uploadCancelled) {
-                            throw new Error('Subida cancelada por el usuario');
-                        }
-                        
-                        const start = i * CHUNK_SIZE;
-                        const end = Math.min(start + CHUNK_SIZE, file.size);
-                        const blob = file.slice(start, end);
-                        console.log(`⬆️ Subiendo chunk ${i + 1} de ${totalChunks} (${Math.round((end - start) / 1024 / 1024)}MB)`);
-                        const res = await fetch(`/api/upload/chunk?uploadId=${encodeURIComponent(uploadId)}&index=${i}`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/octet-stream' },
-                            body: blob
-                        });
-                        if (!res.ok) {
-                            const err = await res.json().catch(() => ({}));
-                            throw new Error(err.message || `Fallo subiendo chunk ${i}`);
-                        }
-                        uploadedBytes += (end - start);
-                        completedChunks += 1;
-                        const percent = (uploadedBytes / file.size) * 100;
-                        const elapsed = (Date.now() - startTime) / 1000; // segundos
-                        const speed = uploadedBytes / elapsed; // bytes/segundo
-                        const remaining = (file.size - uploadedBytes) / speed; // segundos restantes
-                        
-                        progressEl.value = percent;
-                        progressEl.setAttribute('value', percent); // Forzar actualización visual
-                        statusTextEl.textContent = `${Math.round(percent)}%`;
-                        progressDetailEl.textContent = `Chunk ${completedChunks}/${totalChunks}`;
-                        
-                        if (speed > 1024 * 1024) {
-                            speedTextEl.textContent = `${(speed / 1024 / 1024).toFixed(1)} MB/s`;
-                        } else {
-                            speedTextEl.textContent = `${(speed / 1024).toFixed(1)} KB/s`;
-                        }
-                        
-                        console.log(`✅ Chunk ${i + 1} completado. Progreso: ${Math.round(percent)}%`);
+                    cancelBtn.classList.remove('hidden');
+                    cancelBtn.onclick = () => {
+                        isCancelled = true;
+                        statusText.textContent = 'Cancelado';
+                        statusText.classList.add('text-red-400');
+                        cancelBtn.classList.add('hidden');
                     };
 
-                    let cursor = 0;
-                    const workers = new Array(Math.min(CONCURRENCY, totalChunks)).fill(0).map(async () => {
-                        while (cursor < totalChunks) {
-                            const currentIndex = cursor++;
-                            await uploadChunk(currentIndex);
+                    try {
+                        // 1. Iniciar subida
+                        const initRes = await fetch('/api/upload/init', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                fileName: file.name,
+                                size: file.size,
+                                mimeType: file.type,
+                                password,
+                                expires,
+                                maxDownloads
+                            })
+                        });
+
+                        if (!initRes.ok) {
+                            const err = await initRes.json();
+                            throw new Error(err.message || 'Error al iniciar subida');
                         }
-                    });
-                    await Promise.all(workers);
 
-                    console.log('✨ Todos los chunks subidos, finalizando...');
-                    // 3) complete
-                    progressEl.value = 100;
-                    progressEl.setAttribute('value', 100);
-                    statusTextEl.textContent = '100%';
-                    progressDetailEl.textContent = 'Finalizando...';
-                    speedTextEl.textContent = '';
-                    const compRes = await fetch('/api/upload/complete', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ uploadId })
-                    });
-                    const compJson = await compRes.json();
-                    console.log('🎉 Upload completado:', compJson);
-                    if (!compRes.ok) throw new Error(compJson.message || 'No se pudo finalizar la subida.');
+                        const initData = await initRes.json();
+                        uploadId = initData.uploadId;
 
-                    statusTextEl.textContent = '✓ Completado';
-                    progressDetailEl.textContent = 'Archivo listo para compartir';
-                    statusTextEl.classList.add('text-green-400');
-                    resultLinkEl.classList.remove('hidden');
-                    resultInput.value = compJson.downloadUrl;
-                    
-                    // Ocultar botón de cancelar y guardar ID del archivo
-                    cancelBtn.classList.add('hidden');
-                    uploadedFileId = compJson.id;
+                        // 2. Subir chunks
+                        const startTime = Date.now();
+                        
+                        for (let i = 0; i < totalChunks; i++) {
+                            if (isCancelled) throw new Error('Subida cancelada por el usuario');
 
-                    copyButton.addEventListener('click', () => {
-                        navigator.clipboard.writeText(compJson.downloadUrl).then(() => {
-                            copyButton.innerHTML = '<i data-lucide="check" class="icon" style="width:1rem; height:1rem;"></i> Copiado';
+                            const start = i * CHUNK_SIZE;
+                            const end = Math.min(file.size, start + CHUNK_SIZE);
+                            const chunk = file.slice(start, end);
+
+                            await fetch(`/api/upload/chunk?uploadId=${uploadId}&index=${i}`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/octet-stream' },
+                                body: chunk
+                            });
+
+                            // Actualizar progreso
+                            const percent = Math.round(((i + 1) / totalChunks) * 100);
+                            progressBar.value = percent;
+                            
+                            // Calcular velocidad
+                            const elapsed = (Date.now() - startTime) / 1000;
+                            const uploaded = end;
+                            const speed = uploaded / elapsed; // bytes/sec
+                            speedText.textContent = `${formatBytes(speed)}/s`;
+                        }
+
+                        // 3. Completar subida
+                        statusText.textContent = 'Procesando...';
+                        const completeRes = await fetch('/api/upload/complete', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ uploadId })
+                        });
+
+                        if (!completeRes.ok) {
+                            const err = await completeRes.json();
+                            throw new Error(err.message || 'Error al completar subida');
+                        }
+
+                        const completeData = await completeRes.json();
+                        
+                        // Éxito
+                        statusText.textContent = '¡Completado!';
+                        statusText.classList.add('text-green-400');
+                        progressBar.classList.add('hidden');
+                        speedText.textContent = '';
+                        cancelBtn.classList.add('hidden');
+                        
+                        resultLink.classList.remove('hidden');
+                        linkInput.value = completeData.downloadUrl;
+                        
+                        // Copiar al portapapeles
+                        copyBtn.onclick = () => {
+                            navigator.clipboard.writeText(completeData.downloadUrl);
+                            const originalText = copyBtn.innerHTML;
+                            copyBtn.innerHTML = '<i data-lucide="check" class="w-5 h-5"></i> Copiado';
                             lucide.createIcons();
                             setTimeout(() => {
-                                copyButton.innerHTML = '<i data-lucide="copy" class="icon" style="width:1rem; height:1rem;"></i> Copiar enlace';
+                                copyBtn.innerHTML = originalText;
                                 lucide.createIcons();
                             }, 2000);
-                        });
-                    });
-                    
-                    // Botón para eliminar el archivo subido
-                    deleteBtn.addEventListener('click', async () => {
-                        if (!uploadedFileId) return;
+                        };
 
-                        const confirmed = await showConfirmDialog({
-                            title: 'Eliminar archivo',
-                            message: 'Este archivo se eliminará del servidor y el enlace dejará de funcionar.',
-                            confirmText: 'Sí, eliminar',
-                            cancelText: 'Conservar archivo',
-                            tone: 'danger',
-                            icon: 'trash-2'
-                        });
-                        if (!confirmed) {
-                            return;
-                        }
-
-                        try {
-                            deleteBtn.disabled = true;
-                            deleteBtn.innerHTML = '<i data-lucide="loader-2" class="icon animate-spin" style="width:1.25rem; height:1.25rem;"></i> Eliminando...';
-                            lucide.createIcons();
-                            
-                            const res = await fetch(`/api/files/${uploadedFileId}`, {
-                                method: 'DELETE',
-                                credentials: 'include'
+                        // Eliminar archivo (para usuarios anónimos o dueños)
+                        deleteBtn.onclick = async () => {
+                            const confirmed = await showConfirmDialog({
+                                title: 'Eliminar Archivo',
+                                message: '¿Estás seguro de eliminar este archivo? El enlace dejará de funcionar inmediatamente.',
+                                confirmText: 'Eliminar',
+                                tone: 'danger'
                             });
                             
-                            if (res.ok) {
-                                item.style.transition = 'opacity 0.3s ease';
-                                item.style.opacity = '0';
-                                setTimeout(() => {
+                            if (confirmed) {
+                                try {
+                                    await fetch(`/api/files/${completeData.id}`, { method: 'DELETE' });
                                     item.remove();
-                                }, 300);
-                            } else {
-                                const data = await res.json();
-                                alert('Error al eliminar: ' + (data.message || 'Error desconocido'));
-                                deleteBtn.disabled = false;
-                                deleteBtn.innerHTML = '<i data-lucide="trash-2" class="w-5 h-5"></i> Eliminar';
-                                lucide.createIcons();
+                                    showNotification('Archivo eliminado', 'success');
+                                } catch (err) {
+                                    showNotification('Error al eliminar archivo', 'error');
+                                }
                             }
-                        } catch (err) {
-                            console.error('Error eliminando archivo:', err);
-                            alert('Error de conexión al eliminar el archivo');
-                            deleteBtn.disabled = false;
-                            deleteBtn.innerHTML = '<i data-lucide="trash-2" class="w-5 h-5"></i> Eliminar';
-                            lucide.createIcons();
-                        }
-                    });
+                        };
 
-                } catch (err) {
-                    console.error('❌ Error durante la subida:', err);
-                    statusTextEl.textContent = 'Error';
-                    statusTextEl.classList.add('text-red-400');
-                    errorEl.textContent = err.message || 'Error desconocido';
-                    errorEl.classList.remove('hidden');
-                    cancelBtn.classList.add('hidden');
-                    throw err;
-                } finally {
-                    lucide.createIcons();
+                        // Actualizar dashboard si está logueado
+                        if (currentUser) {
+                            // Opcional: refrescar contadores si estuvieran visibles
+                        }
+
+                    } catch (err) {
+                        console.error(err);
+                        statusText.textContent = 'Error';
+                        statusText.classList.add('text-red-400');
+                        errorMessage.textContent = err.message;
+                        errorMessage.classList.remove('hidden');
+                        cancelBtn.classList.add('hidden');
+                    }
                 }
             }
 
-            // --- Lógica de Descarga (Download) ---
-            async function initDownloadListeners(fileId) {
-                const form = document.getElementById('download-form');
+            function initDownloadListeners(fileId) {
+                const downloadForm = document.getElementById('download-form');
                 const passwordGroup = document.getElementById('password-group');
                 const passwordInput = document.getElementById('download-password');
                 const fileNameEl = document.getElementById('file-name');
                 const fileSizeEl = document.getElementById('file-size');
-                const errorEl = document.getElementById('download-error-message');
-                const expiryEl = document.getElementById('expiry-info');
-                const downloadBtn = document.getElementById('download-button');
-                const clearDownloadError = () => {
-                    if (errorEl) {
-                        errorEl.textContent = '';
-                        errorEl.classList.add('hidden');
-                    }
-                };
-                const renderDownloadError = (message) => {
-                    if (errorEl) {
-                        errorEl.textContent = message;
-                        errorEl.classList.remove('hidden');
-                    }
-                };
+                const expiryInfoEl = document.getElementById('expiry-info');
+                const errorMsg = document.getElementById('download-error-message');
+                const reportBtn = document.getElementById('report-file-btn');
+                const previewContainer = document.getElementById('file-preview-container');
+                const previewImg = document.getElementById('file-preview-img');
 
-                try {
-                    // 1. Obtener metadata
-                    const metaRes = await fetch(`/api/meta/${fileId}`);
-                    const meta = await metaRes.json();
-                    
-                    if (!metaRes.ok) {
-                        throw new Error(meta.message);
-                    }
-
-                    clearDownloadError();
-                    
-                    fileNameEl.textContent = meta.fileName;
-                    fileSizeEl.textContent = formatBytes(meta.size);
-
-                    if (meta.requiresPassword) {
-                        passwordGroup.classList.remove('hidden');
-                        passwordInput.required = true;
-                    }
-                    
-                    let expiryText = [];
-                    if (meta.expiresAt) {
-                         expiryText.push(`Expira: ${new Date(meta.expiresAt).toLocaleString()}`);
-                    }
-                    if (meta.downloadsLeft) {
-                        expiryText.push(`Descargas restantes: ${meta.downloadsLeft}`);
-                    }
-                    expiryEl.textContent = expiryText.join(' | ');
-
-                    // 2. Manejar envío de formulario
-                    form.addEventListener('submit', async (e) => {
-                        e.preventDefault();
-                        clearDownloadError();
-                        downloadBtn.disabled = true;
-                        downloadBtn.innerHTML = '<i data-lucide="loader-2" class="icon animate-spin"></i> Procesando...';
-                        lucide.createIcons();
+                // Cargar metadata
+                fetch(`/api/meta/${fileId}`)
+                    .then(res => {
+                        if (res.status === 410) throw new Error('El archivo ha expirado o alcanzado el límite de descargas.');
+                        if (res.status === 404) throw new Error('Archivo no encontrado.');
+                        if (!res.ok) throw new Error('Error al cargar información del archivo.');
+                        return res.json();
+                    })
+                    .then(data => {
+                        fileNameEl.textContent = data.fileName;
+                        fileSizeEl.textContent = formatBytes(data.size);
                         
-                        try {
-                            const payload = {};
-                            if (passwordInput.value) {
-                                payload.password = passwordInput.value;
-                            }
-
-                            const downloadRes = await fetch(`/api/download/${fileId}`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Accept': 'application/json',
-                                    'X-Download-Check': 'true'
-                                },
-                                credentials: 'include',
-                                body: JSON.stringify(payload)
-                            });
-
-                            const validation = await downloadRes.json();
-                            if (!downloadRes.ok || !validation || validation.ok !== true) {
-                                throw new Error(validation?.message || 'No se pudo preparar la descarga.');
-                            }
-
-                            // Iniciar descarga mediante una sumisión directa que evita bloqueos del navegador
-                            triggerDownloadFallback(fileId, passwordInput.value);
-
-                            downloadBtn.disabled = false;
-                            downloadBtn.innerHTML = '<i data-lucide="download" class="icon"></i> Descargar';
-                            lucide.createIcons();
-                            showNotification('Descarga iniciada.', 'success', 2500);
-
-                        } catch (err) {
-                            renderDownloadError(err.message);
-                            if (err && err.name === 'TypeError') {
-                                triggerDownloadFallback(fileId, passwordInput.value);
-                            }
-                            downloadBtn.disabled = false;
-                            downloadBtn.innerHTML = '<i data-lucide="download" class="icon"></i> Descargar';
-                            lucide.createIcons();
+                        if (data.requiresPassword) {
+                            passwordGroup.classList.remove('hidden');
+                            passwordInput.required = true;
                         }
-                    });
 
-
-                } catch (err) {
-                    renderDownloadError(err.message);
-                    form.classList.add('hidden');
-                }
-            }
-            
-            
-            function formatBytes(bytes, decimals = 2) {
-                if (bytes === 0) return '0 Bytes';
-                const k = 1024;
-                const dm = decimals < 0 ? 0 : decimals;
-                const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-            }
-
-            function formatTimeSince(timestamp) {
-                if (!timestamp) return 'poco tiempo';
-                const time = typeof timestamp === 'number' ? timestamp : Number(timestamp);
-                const diffMs = Date.now() - time;
-
-                if (Number.isNaN(diffMs) || diffMs < 0) {
-                    return 'instantes';
-                }
-
-                const seconds = Math.floor(diffMs / 1000);
-                if (seconds < 45) return 'instantes';
-
-                const intervals = [
-                    { label: 'año', seconds: 31536000 },
-                    { label: 'mes', seconds: 2592000 },
-                    { label: 'semana', seconds: 604800 },
-                    { label: 'día', seconds: 86400 },
-                    { label: 'hora', seconds: 3600 },
-                    { label: 'minuto', seconds: 60 }
-                ];
-
-                for (const interval of intervals) {
-                    const count = Math.floor(seconds / interval.seconds);
-                    if (count >= 1) {
-                        return `${count} ${interval.label}${count !== 1 ? 's' : ''}`;
-                    }
-                }
-
-                return 'instantes';
-            }
-
-            // Verificar sesión al cargar y luego renderizar la ruta actual
-            const initialPath = normalizePath(window.location.pathname || '/');
-            checkAuth().finally(() => {
-                renderRoute(initialPath);
-            });
-
-            async function checkAuth() {
-                try {
-                    const res = await fetch('/api/auth/me', {
-                        credentials: 'include'
-                    });
-                    
-                    if (res.ok) {
-                        const data = await res.json();
-                        currentUser = data.user;
-                        updateUserMenu();
-                    } else {
-                        currentUser = null;
-                        updateUserMenu();
-                    }
-                } catch (err) {
-                    console.error('Error verificando autenticación:', err);
-                    updateUserMenu();
-                }
-            }
-
-            function updateUserMenu() {
-                const dropdown = document.getElementById('user-dropdown');
-                
-                if (currentUser) {
-                    // Usuario autenticado - mostrar perfil y opciones
-                    const isAdmin = currentUser.role === 'admin';
-                    
-                    dropdown.innerHTML = `
-                        <div class="user-info">
-                            <div class="user-info-name">${currentUser.username}</div>
-                            <div class="user-info-email">${currentUser.email}</div>
-                        </div>
-                        <a href="#" class="user-dropdown-item" id="menu-upload">
-                            <i data-lucide="upload" style="width: 16px; height: 16px;"></i>
-                            <span>Subir Archivo</span>
-                        </a>
-                        <a href="#" class="user-dropdown-item" id="menu-dashboard">
-                            <i data-lucide="layout-dashboard" style="width: 16px; height: 16px;"></i>
-                            <span>Mi Dashboard</span>
-                        </a>
-                        ${isAdmin ? `
-                        <a href="#" class="user-dropdown-item" id="menu-admin">
-                            <i data-lucide="shield" style="width: 16px; height: 16px;"></i>
-                            <span>Administración</span>
-                        </a>
-                        ` : ''}
-                        <a href="#" class="user-dropdown-item" id="menu-settings">
-                            <i data-lucide="settings" style="width: 16px; height: 16px;"></i>
-                            <span>Configuración</span>
-                        </a>
-                        <div class="user-dropdown-divider"></div>
-                        <a href="#" class="user-dropdown-item" id="menu-logout">
-                            <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
-                            <span>Cerrar Sesión</span>
-                        </a>
-                    `;
-
-                    // Event listeners
-                    document.getElementById('menu-upload').addEventListener('click', (e) => {
-                        e.preventDefault();
-                        closeUserMenu();
-                        navigateTo('/upload');
-                    });
-
-                    document.getElementById('menu-dashboard').addEventListener('click', (e) => {
-                        e.preventDefault();
-                        closeUserMenu();
-                        navigateTo('/dashboard');
-                    });
-
-                    if (isAdmin) {
-                        document.getElementById('menu-admin').addEventListener('click', (e) => {
-                            e.preventDefault();
-                            closeUserMenu();
-                            navigateTo('/admin');
-                        });
-                    }
-
-                    document.getElementById('menu-settings').addEventListener('click', (e) => {
-                        e.preventDefault();
-                        closeUserMenu();
-                        navigateTo('/settings');
-                    });
-
-                    document.getElementById('menu-logout').addEventListener('click', async (e) => {
-                        e.preventDefault();
-                        closeUserMenu();
-                        try {
-                            await fetch('/api/auth/logout', {
-                                method: 'POST',
-                                credentials: 'include'
-                            });
-                            currentUser = null;
-                            updateUserMenu();
-                            postAuthRedirect = null;
-                            navigateTo('/');
-                        } catch (err) {
-                            console.error('Error al cerrar sesión:', err);
+                        if (data.expiresAt) {
+                            const date = new Date(data.expiresAt).toLocaleDateString();
+                            expiryInfoEl.textContent = `Expira el: ${date}`;
                         }
+                        
+                        if (data.downloadsLeft !== null) {
+                            const currentText = expiryInfoEl.textContent;
+                            expiryInfoEl.textContent = `${currentText ? currentText + ' • ' : ''}${data.downloadsLeft} descargas restantes`;
+                        }
+
+                        // Preview de imagen
+                        if (data.mimeType && data.mimeType.startsWith('image/')) {
+                            previewImg.src = `/api/preview/${data.id}`;
+                            previewContainer.classList.remove('hidden');
+                            previewContainer.classList.add('flex');
+                        }
+                    })
+                    .catch(err => {
+                        errorMsg.textContent = err.message;
+                        errorMsg.classList.remove('hidden');
+                        downloadForm.classList.add('hidden');
+                        expiryInfoEl.classList.add('hidden');
                     });
 
-                } else {
-                    // Usuario no autenticado - mostrar opciones de login/registro
-                    dropdown.innerHTML = `
-                        <a href="#" class="user-dropdown-item" id="menu-login">
-                            <i data-lucide="log-in" style="width: 16px; height: 16px;"></i>
-                            <span>Iniciar Sesión</span>
-                        </a>
-                        <a href="#" class="user-dropdown-item" id="menu-register">
-                            <i data-lucide="user-plus" style="width: 16px; height: 16px;"></i>
-                            <span>Registrarse</span>
-                        </a>
-                    `;
+                downloadForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const password = passwordInput.value;
+                    triggerDownloadFallback(fileId, password);
+                });
 
-                    // Event listeners
-                    document.getElementById('menu-login').addEventListener('click', (e) => {
+                // Reportar archivo
+                reportBtn.addEventListener('click', () => {
+                    const template = document.getElementById('report-modal-template').content.cloneNode(true);
+                    document.body.appendChild(template);
+                    
+                    const modalOverlay = document.getElementById('report-modal-overlay');
+                    const form = document.getElementById('report-form');
+                    const cancelBtn = document.getElementById('cancel-report-btn');
+                    const reasonInput = document.getElementById('report-reason');
+                    const reportError = document.getElementById('report-error');
+
+                    const close = () => modalOverlay.remove();
+                    
+                    cancelBtn.onclick = close;
+                    modalOverlay.onclick = (e) => {
+                        if (e.target === modalOverlay) close();
+                    };
+
+                    form.onsubmit = async (e) => {
                         e.preventDefault();
-                        closeUserMenu();
-                        postAuthRedirect = '/dashboard';
-                        navigateTo('/login');
-                    });
-
-                    document.getElementById('menu-register').addEventListener('click', (e) => {
-                        e.preventDefault();
-                        closeUserMenu();
-                        navigateTo('/register');
-                    });
-                }
-
-                lucide.createIcons();
+                        try {
+                            const res = await fetch(`/api/report/${fileId}`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ reason: reasonInput.value })
+                            });
+                            
+                            if (res.ok) {
+                                showNotification('Reporte enviado. Gracias.', 'success');
+                                close();
+                            } else {
+                                const data = await res.json();
+                                reportError.textContent = data.message || 'Error al enviar reporte';
+                                reportError.classList.remove('hidden');
+                            }
+                        } catch (err) {
+                            reportError.textContent = 'Error de conexión';
+                            reportError.classList.remove('hidden');
+                        }
+                    };
+                });
             }
 
-            // Toggle del menú desplegable
-            const userMenuBtn = document.getElementById('user-menu-btn');
-            const userDropdown = document.getElementById('user-dropdown');
-
-            userMenuBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                userDropdown.classList.toggle('show');
-            });
-
-            // Cerrar menú al hacer click fuera
-            document.addEventListener('click', (e) => {
-                if (!userDropdown.contains(e.target) && e.target !== userMenuBtn) {
-                    userDropdown.classList.remove('show');
-                }
-            });
-
-            function closeUserMenu() {
-                userDropdown.classList.remove('show');
-            }
-
-            // --- Vistas de autenticación ---
             function loadLoginView() {
                 rememberLastView('login');
-                postAuthRedirect = postAuthRedirect || '/dashboard';
                 const template = document.getElementById('login-view-template').content.cloneNode(true);
                 appContainer.innerHTML = '';
                 appContainer.appendChild(template);
-
-                const form = document.getElementById('login-form');
-                const errorEl = document.getElementById('login-error');
 
                 document.getElementById('goto-register').addEventListener('click', (e) => {
                     e.preventDefault();
                     navigateTo('/register');
                 });
+                
+                document.getElementById('goto-forgot-password').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    navigateTo('/forgot-password');
+                });
+
+                const form = document.getElementById('login-form');
+                const errorEl = document.getElementById('login-error');
 
                 form.addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    errorEl.classList.add('hidden');
-
                     const emailOrUsername = document.getElementById('login-email-username').value;
                     const password = document.getElementById('login-password').value;
 
@@ -2531,7 +3148,6 @@
                         const res = await fetch('/api/auth/login', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            credentials: 'include',
                             body: JSON.stringify({ emailOrUsername, password })
                         });
 
@@ -2540,9 +3156,9 @@
                         if (res.ok) {
                             currentUser = data.user;
                             updateUserMenu();
-                            const targetRoute = postAuthRedirect || '/dashboard';
+                            showNotification('Bienvenido de nuevo', 'success');
+                            navigateTo(postAuthRedirect || '/dashboard');
                             postAuthRedirect = null;
-                            navigateTo(targetRoute, { replace: true });
                         } else {
                             errorEl.textContent = data.message;
                             errorEl.classList.remove('hidden');
@@ -2552,46 +3168,32 @@
                         errorEl.classList.remove('hidden');
                     }
                 });
-
-                lucide.createIcons();
             }
 
             function loadRegisterView() {
                 rememberLastView('register');
-                postAuthRedirect = postAuthRedirect || '/dashboard';
                 const template = document.getElementById('register-view-template').content.cloneNode(true);
                 appContainer.innerHTML = '';
                 appContainer.appendChild(template);
-
-                const form = document.getElementById('register-form');
-                const errorEl = document.getElementById('register-error');
 
                 document.getElementById('goto-login').addEventListener('click', (e) => {
                     e.preventDefault();
                     navigateTo('/login');
                 });
 
+                const form = document.getElementById('register-form');
+                const errorEl = document.getElementById('register-error');
+
                 form.addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    errorEl.classList.add('hidden');
-
                     const email = document.getElementById('register-email').value;
                     const username = document.getElementById('register-username').value;
                     const password = document.getElementById('register-password').value;
-
-                    // Validar formato de email en frontend
-                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                    if (!emailRegex.test(email)) {
-                        errorEl.textContent = 'Por favor ingresa un email válido (ejemplo: correo@dominio.com)';
-                        errorEl.classList.remove('hidden');
-                        return;
-                    }
 
                     try {
                         const res = await fetch('/api/auth/register', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            credentials: 'include',
                             body: JSON.stringify({ email, username, password })
                         });
 
@@ -2600,9 +3202,8 @@
                         if (res.ok) {
                             currentUser = data.user;
                             updateUserMenu();
-                            const targetRoute = postAuthRedirect || '/dashboard';
-                            postAuthRedirect = null;
-                            navigateTo(targetRoute, { replace: true });
+                            showNotification('Cuenta creada con éxito', 'success');
+                            navigateTo('/dashboard');
                         } else {
                             errorEl.textContent = data.message;
                             errorEl.classList.remove('hidden');
@@ -2612,710 +3213,191 @@
                         errorEl.classList.remove('hidden');
                     }
                 });
-
-                lucide.createIcons();
             }
 
-            async function loadDashboardView() {
-                if (!currentUser) {
-                    postAuthRedirect = '/dashboard';
-                    navigateTo('/login', { replace: true });
+            function loadForgotPasswordView() {
+                const template = document.getElementById('forgot-password-view-template').content.cloneNode(true);
+                appContainer.innerHTML = '';
+                appContainer.appendChild(template);
+
+                document.getElementById('back-to-login-from-forgot').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    navigateTo('/login');
+                });
+
+                const form = document.getElementById('forgot-password-form');
+                const msgEl = document.getElementById('forgot-message');
+                const errorEl = document.getElementById('forgot-error');
+
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const email = document.getElementById('forgot-email').value;
+                    
+                    try {
+                        const res = await fetch('/api/auth/forgot-password', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email })
+                        });
+                        
+                        const data = await res.json();
+                        
+                        if (res.ok) {
+                            msgEl.textContent = data.message;
+                            msgEl.classList.remove('hidden');
+                            errorEl.classList.add('hidden');
+                        } else {
+                            errorEl.textContent = data.message;
+                            errorEl.classList.remove('hidden');
+                            msgEl.classList.add('hidden');
+                        }
+                    } catch (err) {
+                        errorEl.textContent = 'Error de conexión';
+                        errorEl.classList.remove('hidden');
+                    }
+                });
+            }
+
+            function loadResetPasswordView() {
+                const template = document.getElementById('reset-password-view-template').content.cloneNode(true);
+                appContainer.innerHTML = '';
+                appContainer.appendChild(template);
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const token = urlParams.get('token');
+
+                const form = document.getElementById('reset-password-form');
+                const msgEl = document.getElementById('reset-message');
+                const errorEl = document.getElementById('reset-error');
+
+                if (!token) {
+                    errorEl.textContent = 'Token inválido o faltante.';
+                    errorEl.classList.remove('hidden');
+                    form.classList.add('hidden');
                     return;
                 }
 
-                postAuthRedirect = null;
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const newPassword = document.getElementById('reset-new-password').value;
+
+                    try {
+                        const res = await fetch('/api/auth/reset-password', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ token, newPassword })
+                        });
+
+                        const data = await res.json();
+
+                        if (res.ok) {
+                            msgEl.textContent = data.message;
+                            msgEl.classList.remove('hidden');
+                            errorEl.classList.add('hidden');
+                            setTimeout(() => navigateTo('/login'), 3000);
+                        } else {
+                            errorEl.textContent = data.message;
+                            errorEl.classList.remove('hidden');
+                        }
+                    } catch (err) {
+                        errorEl.textContent = 'Error de conexión';
+                        errorEl.classList.remove('hidden');
+                    }
+                });
+            }
+
+            function loadDashboardView() {
                 rememberLastView('dashboard');
                 const template = document.getElementById('dashboard-view-template').content.cloneNode(true);
                 appContainer.innerHTML = '';
                 appContainer.appendChild(template);
 
                 document.getElementById('dashboard-username').textContent = currentUser.username;
-
-                document.getElementById('goto-upload-from-dashboard').addEventListener('click', () => {
-                    navigateTo('/');
-                });
-
-                document.getElementById('open-settings-btn').addEventListener('click', () => {
-                    navigateTo('/settings');
-                });
-
-                // Cargar archivos del usuario y estadísticas
-                await loadUserFiles();
-
-                lucide.createIcons();
-            }
-
-            function loadAdminView() {
-                if (!currentUser || currentUser.role !== 'admin') {
-                    showNotification('No tienes permisos para acceder a esta sección', 'error');
-                    navigateTo('/dashboard', { replace: true });
-                    return;
-                }
-
-                postAuthRedirect = null;
-                const template = document.getElementById('admin-view-template').content.cloneNode(true);
-                appContainer.innerHTML = '';
-                appContainer.appendChild(template);
-
-                document.getElementById('back-to-dashboard-admin').addEventListener('click', () => {
-                    navigateTo('/dashboard');
-                });
-
-                let currentTab = 'dashboard';
-                let uploadsChart, filesTypeChart;
-
-                // Tab switching
-                document.querySelectorAll('.admin-tab').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const tab = btn.dataset.tab;
-                        switchAdminTab(tab);
-                    });
-                });
-
-                function switchAdminTab(tab) {
-                    // Update tab buttons
-                    document.querySelectorAll('.admin-tab').forEach(btn => {
-                        btn.classList.toggle('active', btn.dataset.tab === tab);
-                    });
-
-                    currentTab = tab;
-                    const contentContainer = document.getElementById('admin-tab-content');
-
-                    switch(tab) {
-                        case 'dashboard':
-                            loadDashboardTab(contentContainer);
-                            break;
-                        case 'users':
-                            loadUsersTab(contentContainer);
-                            break;
-                        case 'files':
-                            loadFilesTab(contentContainer);
-                            break;
-                    }
-                }
-
-                async function loadDashboardTab(container) {
-                    const template = document.getElementById('admin-dashboard-tab').content.cloneNode(true);
-                    container.innerHTML = '';
-                    container.appendChild(template);
-
-                    try {
-                        // Load stats
-                        const statsRes = await fetch('/api/admin/stats', { credentials: 'include' });
-                        if (!statsRes.ok) throw new Error('Error loading stats');
-                        const statsData = await statsRes.json();
-
-                        document.getElementById('dash-total-users').textContent = statsData.stats.totalUsers;
-                        document.getElementById('dash-total-files').textContent = statsData.stats.totalFiles;
-                        document.getElementById('dash-total-downloads').textContent = statsData.stats.totalDownloads;
-
-                        // Load analytics
-                        const analyticsRes = await fetch('/api/admin/analytics', { credentials: 'include' });
-                        if (!analyticsRes.ok) throw new Error('Error loading analytics');
-                        const analytics = await analyticsRes.json();
-
-                        // Create uploads chart
-                        const uploadsCtx = document.getElementById('uploads-chart').getContext('2d');
-                        if (uploadsChart) uploadsChart.destroy();
-                        
-                        const labels = analytics.uploadsPerDay.map(d => new Date(d.date).toLocaleDateString('es', { month: 'short', day: 'numeric' }));
-                        const data = analytics.uploadsPerDay.map(d => d.count);
-
-                        uploadsChart = new Chart(uploadsCtx, {
-                            type: 'line',
-                            data: {
-                                labels: labels,
-                                datasets: [{
-                                    label: 'Subidas',
-                                    data: data,
-                                    borderColor: '#dc2626',
-                                    backgroundColor: 'rgba(220, 38, 38, 0.1)',
-                                    tension: 0.4,
-                                    fill: true
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: true,
-                                plugins: {
-                                    legend: { display: false }
-                                },
-                                scales: {
-                                    y: { beginAtZero: true, ticks: { stepSize: 1 } }
-                                }
-                            }
-                        });
-
-                        // Create files by type chart
-                        const filesTypeCtx = document.getElementById('files-type-chart').getContext('2d');
-                        if (filesTypeChart) filesTypeChart.destroy();
-
-                        filesTypeChart = new Chart(filesTypeCtx, {
-                            type: 'doughnut',
-                            data: {
-                                labels: analytics.filesByType.map(f => f.type),
-                                datasets: [{
-                                    data: analytics.filesByType.map(f => f.count),
-                                    backgroundColor: [
-                                        '#dc2626', '#16a34a', '#2563eb', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'
-                                    ]
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: true,
-                                plugins: {
-                                    legend: { position: 'right' }
-                                }
-                            }
-                        });
-
-                        // Top files
-                        const topFilesList = document.getElementById('top-files-list');
-                        if (analytics.topFiles && analytics.topFiles.length > 0) {
-                            topFilesList.innerHTML = analytics.topFiles.map((file, idx) => `
-                                <div class="flex items-center justify-between p-3 bg-white/5 dark:bg-slate-800/30 light:bg-gray-100/50 rounded-lg">
-                                    <div class="flex items-center gap-3">
-                                        <span class="text-lg font-bold text-red-500">#${idx + 1}</span>
-                                        <div>
-                                            <p class="text-sm font-medium dark:text-white light:text-gray-800 truncate" style="max-width: 200px;">${file.originalName}</p>
-                                            <p class="text-xs dark:text-gray-400 light:text-gray-600">${file.username || 'Anónimo'}</p>
-                                        </div>
-                                    </div>
-                                    <span class="text-sm font-semibold dark:text-gray-300 light:text-gray-700">${file.downloadCount} descargas</span>
-                                </div>
-                            `).join('');
-                        } else {
-                            topFilesList.innerHTML = '<p class="text-sm dark:text-gray-400 light:text-gray-600">Sin datos</p>';
-                        }
-
-                        // Top users
-                        const topUsersList = document.getElementById('top-users-list');
-                        if (analytics.topUsers && analytics.topUsers.length > 0) {
-                            topUsersList.innerHTML = analytics.topUsers.map((user, idx) => `
-                                <div class="flex items-center justify-between p-3 bg-white/5 dark:bg-slate-800/30 light:bg-gray-100/50 rounded-lg">
-                                    <div class="flex items-center gap-3">
-                                        <span class="text-lg font-bold text-blue-500">#${idx + 1}</span>
-                                        <div>
-                                            <p class="text-sm font-medium dark:text-white light:text-gray-800">${user.username}</p>
-                                            <p class="text-xs dark:text-gray-400 light:text-gray-600">${user.fileCount} archivos</p>
-                                        </div>
-                                    </div>
-                                    <span class="text-sm font-semibold dark:text-gray-300 light:text-gray-700">${user.totalDownloads} descargas</span>
-                                </div>
-                            `).join('');
-                        } else {
-                            topUsersList.innerHTML = '<p class="text-sm dark:text-gray-400 light:text-gray-600">Sin datos</p>';
-                        }
-
-                    } catch (err) {
-                        console.error('Error loading dashboard:', err);
-                        showNotification('Error al cargar el dashboard', 'error');
-                    }
-
-                    lucide.createIcons();
-                }
-
-                async function loadUsersTab(container) {
-                    const template = document.getElementById('admin-users-tab').content.cloneNode(true);
-                    container.innerHTML = '';
-                    container.appendChild(template);
-
-                    document.getElementById('refresh-users-btn').addEventListener('click', () => loadUsersTab(container));
-
-                    try {
-                        const res = await fetch('/api/admin/users', { credentials: 'include' });
-                        if (!res.ok) throw new Error('Error loading users');
-                        const { users } = await res.json();
-
-                        const tbody = document.getElementById('users-table-body');
-                        if (users && users.length > 0) {
-                            tbody.innerHTML = users.map(user => {
-                                const date = new Date(user.createdAt).toLocaleDateString();
-                                const size = (user.totalSize / (1024 * 1024)).toFixed(2);
-                                const roleClass = user.role === 'admin' ? 'text-red-500 font-semibold' : 'dark:text-gray-400 light:text-gray-600';
-                                const isCurrentUser = user.id === currentUser.id;
-
-                                return `
-                                    <tr class="border-b border-gray-300 dark:border-slate-700/50 hover:bg-white/5">
-                                        <td class="py-3 px-2 dark:text-white light:text-gray-800">${user.username}${isCurrentUser ? ' (tú)' : ''}</td>
-                                        <td class="py-3 px-2 dark:text-gray-300 light:text-gray-700">${user.email}</td>
-                                        <td class="py-3 px-2 ${roleClass}">${user.role || 'user'}</td>
-                                        <td class="py-3 px-2 dark:text-gray-400 light:text-gray-600">${user.fileCount}</td>
-                                        <td class="py-3 px-2 dark:text-gray-400 light:text-gray-600">${user.totalDownloads}</td>
-                                        <td class="py-3 px-2 dark:text-gray-400 light:text-gray-600">${date}</td>
-                                        <td class="py-3 px-2">
-                                            <div class="flex gap-2">
-                                                ${!isCurrentUser ? `
-                                                    <button class="px-2 py-1 text-xs rounded bg-blue-600 hover:bg-blue-700 text-white" onclick="window.adminChangeRole('${user.id}', '${user.role === 'admin' ? 'user' : 'admin'}', '${user.username}')">
-                                                        ${user.role === 'admin' ? 'Quitar admin' : 'Hacer admin'}
-                                                    </button>
-                                                    <button class="px-2 py-1 text-xs rounded bg-red-600 hover:bg-red-700 text-white" onclick="window.adminDeleteUser('${user.id}', '${user.username}')">
-                                                        Eliminar
-                                                    </button>
-                                                ` : ''}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                `;
-                            }).join('');
-                        } else {
-                            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 dark:text-gray-400 light:text-gray-600">No hay usuarios</td></tr>';
-                        }
-
-                    } catch (err) {
-                        console.error('Error loading users:', err);
-                        showNotification('Error al cargar usuarios', 'error');
-                    }
-
-                    lucide.createIcons();
-                }
-
-                async function loadFilesTab(container) {
-                    const template = document.getElementById('admin-files-tab').content.cloneNode(true);
-                    container.innerHTML = '';
-                    container.appendChild(template);
-
-                    let searchTimeout;
-                    document.getElementById('search-files-input').addEventListener('input', (e) => {
-                        clearTimeout(searchTimeout);
-                        searchTimeout = setTimeout(() => {
-                            loadFiles(e.target.value);
-                        }, 500);
-                    });
-
-                    document.getElementById('refresh-files-btn').addEventListener('click', () => loadFiles());
-
-                    async function loadFiles(search = '') {
-                        try {
-                            const url = `/api/admin/files?search=${encodeURIComponent(search)}`;
-                            const res = await fetch(url, { credentials: 'include' });
-                            if (!res.ok) throw new Error('Error loading files');
-                            const { files } = await res.json();
-
-                            const tbody = document.getElementById('files-table-body');
-                            if (files && files.length > 0) {
-                                tbody.innerHTML = files.map(file => {
-                                    const date = new Date(file.createdAt).toLocaleDateString();
-                                    const size = (file.size / (1024 * 1024)).toFixed(2);
-
-                                    return `
-                                        <tr class="border-b border-gray-300 dark:border-slate-700/50 hover:bg-white/5">
-                                            <td class="py-3 px-2 dark:text-white light:text-gray-800 truncate" style="max-width: 250px;">${file.originalName}</td>
-                                            <td class="py-3 px-2 dark:text-gray-300 light:text-gray-700">${file.username || 'Anónimo'}</td>
-                                            <td class="py-3 px-2 dark:text-gray-400 light:text-gray-600">${size} MB</td>
-                                            <td class="py-3 px-2 dark:text-gray-400 light:text-gray-600">${file.downloadCount}</td>
-                                            <td class="py-3 px-2 dark:text-gray-400 light:text-gray-600">${date}</td>
-                                            <td class="py-3 px-2">
-                                                <button class="px-2 py-1 text-xs rounded bg-red-600 hover:bg-red-700 text-white" onclick="window.adminDeleteFile('${file.id}', '${file.originalName}')">
-                                                    Eliminar
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    `;
-                                }).join('');
-                            } else {
-                                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 dark:text-gray-400 light:text-gray-600">No hay archivos</td></tr>';
-                            }
-
-                        } catch (err) {
-                            console.error('Error loading files:', err);
-                            showNotification('Error al cargar archivos', 'error');
-                        }
-
-                        lucide.createIcons();
-                    }
-
-                    loadFiles();
-                }
-
-                // Global functions for button actions
-                window.adminChangeRole = async (userId, newRole, username) => {
-                    const confirmed = await showConfirmDialog({
-                        title: '¿Cambiar rol de usuario?',
-                        message: `¿Estás seguro de cambiar el rol de ${username} a ${newRole}?`,
-                        confirmText: 'Cambiar rol',
-                        icon: 'shield'
-                    });
-
-                    if (!confirmed) return;
-
-                    try {
-                        const res = await fetch(`/api/admin/users/${userId}/role`, {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json' },
-                            credentials: 'include',
-                            body: JSON.stringify({ role: newRole })
-                        });
-
-                        const data = await res.json();
-                        if (res.ok) {
-                            showNotification(data.message, 'success');
-                            switchAdminTab('users');
-                        } else {
-                            showNotification(data.message, 'error');
-                        }
-                    } catch (err) {
-                        showNotification('Error al cambiar rol', 'error');
-                    }
-                };
-
-                window.adminDeleteUser = async (userId, username) => {
-                    const confirmed = await showConfirmDialog({
-                        title: '⚠️ ¿Eliminar usuario?',
-                        message: `¿Estás seguro de eliminar a ${username}? Se eliminarán todos sus archivos. Esta acción no se puede deshacer.`,
-                        confirmText: 'Eliminar',
-                        tone: 'danger'
-                    });
-
-                    if (!confirmed) return;
-
-                    try {
-                        const res = await fetch(`/api/admin/users/${userId}`, {
-                            method: 'DELETE',
-                            credentials: 'include'
-                        });
-
-                        const data = await res.json();
-                        if (res.ok) {
-                            showNotification(data.message, 'success');
-                            switchAdminTab('users');
-                        } else {
-                            showNotification(data.message, 'error');
-                        }
-                    } catch (err) {
-                        showNotification('Error al eliminar usuario', 'error');
-                    }
-                };
-
-                window.adminDeleteFile = async (fileId, fileName) => {
-                    const confirmed = await showConfirmDialog({
-                        title: '⚠️ ¿Eliminar archivo?',
-                        message: `¿Estás seguro de eliminar "${fileName}"? Esta acción no se puede deshacer.`,
-                        confirmText: 'Eliminar',
-                        tone: 'danger'
-                    });
-
-                    if (!confirmed) return;
-
-                    try {
-                        const res = await fetch(`/api/admin/files/${fileId}`, {
-                            method: 'DELETE',
-                            credentials: 'include'
-                        });
-
-                        const data = await res.json();
-                        if (res.ok) {
-                            showNotification(data.message, 'success');
-                            switchAdminTab('files');
-                        } else {
-                            showNotification(data.message, 'error');
-                        }
-                    } catch (err) {
-                        showNotification('Error al eliminar archivo', 'error');
-                    }
-                };
-
-                // Load initial tab
-                switchAdminTab('dashboard');
-                lucide.createIcons();
-            }
-
-            function loadSettingsView() {
-                if (!currentUser) {
-                    postAuthRedirect = '/settings';
-                    navigateTo('/login', { replace: true });
-                    return;
-                }
-
-                postAuthRedirect = null;
-                rememberLastView('settings');
-                const template = document.getElementById('settings-view-template').content.cloneNode(true);
-                appContainer.innerHTML = '';
-                appContainer.appendChild(template);
-
-                document.getElementById('back-to-dashboard').addEventListener('click', () => {
-                    navigateTo('/dashboard');
-                });
-
-                const passwordForm = document.getElementById('change-password-form');
-                const passwordMessage = document.getElementById('password-change-message');
-                
-                // Prefill profile form
-                const profileForm = document.getElementById('update-profile-form');
-                const profileEmail = document.getElementById('profile-email');
-                const profileUsername = document.getElementById('profile-username');
-                const profileMsg = document.getElementById('profile-update-message');
-                
-                if (profileEmail) profileEmail.value = currentUser.email || '';
-                if (profileUsername) profileUsername.value = currentUser.username || '';
-
-                profileForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    if (!profileEmail || !profileUsername) return;
-                    profileMsg.classList.add('hidden');
-
-                    const email = profileEmail.value.trim();
-                    const username = profileUsername.value.trim();
-
-                    // Frontend validations
-                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                    if (!emailRegex.test(email)) {
-                        profileMsg.textContent = 'Por favor ingresa un email válido.';
-                        profileMsg.className = 'mt-3 p-3 rounded-lg text-sm bg-red-500/20 border border-red-500 text-red-400';
-                        profileMsg.classList.remove('hidden');
-                        return;
-                    }
-                    if (username.length < 3) {
-                        profileMsg.textContent = 'El nombre de usuario debe tener al menos 3 caracteres.';
-                        profileMsg.className = 'mt-3 p-3 rounded-lg text-sm bg-red-500/20 border border-red-500 text-red-400';
-                        profileMsg.classList.remove('hidden');
-                        return;
-                    }
-
-                    try {
-                        const res = await fetch('/api/user/update-profile', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            credentials: 'include',
-                            body: JSON.stringify({ email, username })
-                        });
-                        const data = await res.json().catch(() => ({}));
-
-                        profileMsg.textContent = data.message || (res.ok ? 'Perfil actualizado.' : 'No se pudo actualizar el perfil.');
-                        profileMsg.className = res.ok
-                            ? 'mt-3 p-3 rounded-lg text-sm bg-green-500/20 border border-green-500 text-green-400'
-                            : 'mt-3 p-3 rounded-lg text-sm bg-red-500/20 border border-red-500 text-red-400';
-                        profileMsg.classList.remove('hidden');
-
-                        if (res.ok && data.user) {
-                            currentUser = data.user;
-                            updateUserMenu();
-                        }
-                    } catch (err) {
-                        profileMsg.textContent = 'Error de conexión';
-                        profileMsg.className = 'mt-3 p-3 rounded-lg text-sm bg-red-500/20 border border-red-500 text-red-400';
-                        profileMsg.classList.remove('hidden');
-                    }
-                });
-
-                passwordForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    passwordMessage.classList.add('hidden');
-
-                    const currentPassword = document.getElementById('current-password').value;
-                    const newPassword = document.getElementById('new-password').value;
-
-                    try {
-                        const res = await fetch('/api/user/change-password', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            credentials: 'include',
-                            body: JSON.stringify({ currentPassword, newPassword })
-                        });
-
-                        const data = await res.json();
-
-                        passwordMessage.textContent = data.message;
-                        passwordMessage.className = res.ok 
-                            ? 'mt-3 p-3 rounded-lg text-sm bg-green-500/20 border border-green-500 text-green-400'
-                            : 'mt-3 p-3 rounded-lg text-sm bg-red-500/20 border border-red-500 text-red-400';
-                        passwordMessage.classList.remove('hidden');
-
-                        if (res.ok) {
-                            passwordForm.reset();
-                        }
-                    } catch (err) {
-                        passwordMessage.textContent = 'Error de conexión';
-                        passwordMessage.className = 'mt-3 p-3 rounded-lg text-sm bg-red-500/20 border border-red-500 text-red-400';
-                        passwordMessage.classList.remove('hidden');
-                    }
-                });
-
-                document.getElementById('delete-account-btn').addEventListener('click', () => {
-                    showDeleteAccountModal();
-                });
-
-                lucide.createIcons();
-            }
-
-            function showDeleteAccountModal() {
-                const modalTemplate = document.getElementById('delete-account-modal-template').content.cloneNode(true);
-                document.body.appendChild(modalTemplate);
-
-                const overlay = document.getElementById('delete-modal-overlay');
-                const form = document.getElementById('delete-account-form');
-                const errorEl = document.getElementById('delete-error');
-                const cancelBtn = document.getElementById('cancel-delete-btn');
-
-                // Cerrar modal
-                const closeModal = () => {
-                    overlay.remove();
-                };
-
-                cancelBtn.addEventListener('click', closeModal);
-                overlay.addEventListener('click', (e) => {
-                    if (e.target === overlay) closeModal();
-                });
-
-                // Enviar formulario
-                form.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    errorEl.classList.add('hidden');
-
-                    const password = document.getElementById('delete-password').value;
-
-                    try {
-                        const res = await fetch('/api/user/account', {
-                            method: 'DELETE',
-                            headers: { 'Content-Type': 'application/json' },
-                            credentials: 'include',
-                            body: JSON.stringify({ password })
-                        });
-
-                        const data = await res.json();
-
-                        if (res.ok) {
-                            closeModal();
-                            currentUser = null;
-                            updateUserMenu();
-                            showNotification('Tu cuenta ha sido eliminada exitosamente.', 'success');
-                            postAuthRedirect = null;
-                            navigateTo('/');
-                        } else {
-                            errorEl.textContent = data.message;
-                            errorEl.classList.remove('hidden');
-                        }
-                    } catch (err) {
-                        errorEl.textContent = 'Error de conexión';
-                        errorEl.classList.remove('hidden');
-                    }
-                });
-
-                lucide.createIcons();
+                document.getElementById('storage-text').textContent = `${formatBytes(currentUser.storageUsed)} / ${formatBytes(currentUser.storageLimit)}`;
+                const percent = Math.min(100, (currentUser.storageUsed / currentUser.storageLimit) * 100);
+                document.getElementById('storage-bar').style.width = `${percent}%`;
+
+                document.getElementById('open-settings-btn').addEventListener('click', () => navigateTo('/settings'));
+                document.getElementById('goto-upload-from-dashboard').addEventListener('click', () => navigateTo('/upload'));
+
+                // Cargar archivos del usuario
+                loadUserFiles();
+                initIcons();
             }
 
             async function loadUserFiles() {
-                const filesList = document.getElementById('user-files-list');
-
+                const listContainer = document.getElementById('user-files-list');
                 try {
-                    const res = await fetch('/api/user/files', {
-                        credentials: 'include'
-                    });
-
-                    let data = {};
-                    try {
-                        data = await res.json();
-                    } catch (parseErr) {
-                        console.error('Error al parsear respuesta de archivos:', parseErr);
-                        data = {};
+                    const res = await fetch('/api/user/files');
+                    const data = await res.json();
+                    
+                    document.getElementById('dashboard-file-count').textContent = data.files.length;
+                    const totalDownloads = data.files.reduce((acc, f) => acc + f.downloadCount, 0);
+                    document.getElementById('dashboard-total-downloads').textContent = totalDownloads;
+                    
+                    if (data.files.length > 0) {
+                        document.getElementById('dashboard-latest-file').textContent = data.files[0].originalName;
                     }
 
-                    if (!res.ok) {
-                        const serverMessage = data?.message || 'Error cargando archivos';
-                        throw new Error(serverMessage);
-                    }
-
-                    const files = Array.isArray(data.files) ? data.files : [];
-
-                    const countEl = document.getElementById('dashboard-file-count');
-                    const downloadsEl = document.getElementById('dashboard-total-downloads');
-                    const latestEl = document.getElementById('dashboard-latest-file');
-
-                    if (files.length === 0) {
-                        if (countEl) countEl.textContent = '0';
-                        if (downloadsEl) downloadsEl.textContent = '0';
-                        if (latestEl) latestEl.textContent = 'Sin archivos';
-                        filesList.innerHTML = '<p class="text-center text-gray-500 py-8">No has subido ningún archivo aún.</p>';
+                    if (data.files.length === 0) {
+                        listContainer.innerHTML = '<p class="text-center text-gray-500 py-8">No has subido archivos aún.</p>';
                         return;
                     }
 
-                    const totalDownloads = files.reduce((sum, file) => sum + (file.downloadCount || 0), 0);
-                    if (countEl) countEl.textContent = files.length;
-                    if (downloadsEl) downloadsEl.textContent = totalDownloads;
-                    if (latestEl) {
-                        const latestFile = files[0];
-                        latestEl.textContent = `${latestFile.originalName} • hace ${formatTimeSince(latestFile.createdAt)}`;
-                    }
-
-                    filesList.innerHTML = '';
-
-                    files.forEach(file => {
-                        const fileItem = document.createElement('div');
-                        fileItem.className = 'p-4 bg-white/5 dark:bg-slate-800/30 light:bg-gray-100/50 rounded-lg border border-gray-300 dark:border-slate-700 flex justify-between items-center';
-
-                        const expiryInfo = [];
-                        if (file.expiresAt) {
-                            const expired = file.expiresAt < Date.now();
-                            expiryInfo.push(`<span class="${expired ? 'text-red-400' : 'text-gray-400'}">${expired ? 'Expirado' : 'Expira: ' + new Date(file.expiresAt).toLocaleDateString()}</span>`);
-                        }
-                        if (file.maxDownloads) {
-                            expiryInfo.push(`<span class="text-gray-400">${file.downloadCount}/${file.maxDownloads} descargas</span>`);
-                        }
-
-                        fileItem.innerHTML = `
-                            <div class="flex-1">
-                                <p class="font-medium dark:text-white light:text-gray-800">${file.originalName}</p>
-                                <p class="text-sm text-gray-400">${formatBytes(file.size)} • Subido hace ${formatTimeSince(file.createdAt)}</p>
-                                <p class="text-xs text-red-400 mt-1">Descargas: ${file.downloadCount || 0}</p>
-                                ${expiryInfo.length > 0 ? '<p class="text-xs mt-1 text-gray-400">' + expiryInfo.join(' • ') + '</p>' : ''}
+                    listContainer.innerHTML = data.files.map(file => `
+                        <div class="bg-white/5 dark:bg-slate-800/30 light:bg-gray-100/60 p-4 rounded-lg border border-gray-300 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div class="flex items-center gap-3 overflow-hidden">
+                                <div class="p-2 bg-white/10 rounded-lg">
+                                    <i data-lucide="file" class="w-6 h-6 text-blue-400"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="font-medium truncate dark:text-white light:text-gray-800" title="${file.originalName}">${file.originalName}</p>
+                                    <p class="text-xs text-gray-400">${formatBytes(file.size)} • ${new Date(file.createdAt).toLocaleDateString()}</p>
+                                </div>
                             </div>
-                            <div class="flex gap-2">
-                                <button class="copy-link-btn group px-3 py-2 bg-red-600 hover:bg-red-500 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-400 text-white text-sm rounded-lg transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2" data-id="${file.id}">
-                                    <i data-lucide="copy" class="icon text-white transition-colors group-hover:text-white group-focus:text-white" style="width:1rem; height:1rem;"></i>
-				</button>
-                                <button class="delete-file-btn px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors" data-id="${file.id}">
-                                    <i data-lucide="trash-2" class="icon" style="width:1rem; height:1rem;"></i>
-                                </button>
+                            <div class="flex items-center gap-4 self-end sm:self-auto">
+                                <div class="text-right">
+                                    <p class="text-sm font-medium dark:text-white light:text-gray-800">${file.downloadCount} <span class="text-xs text-gray-500">descargas</span></p>
+                                    ${file.expiresAt ? `<p class="text-xs text-yellow-500">Expira: ${new Date(file.expiresAt).toLocaleDateString()}</p>` : ''}
+                                </div>
+                                <div class="flex gap-2">
+                                    <button class="p-2 hover:bg-white/10 rounded-lg text-blue-400 copy-link-btn" data-id="${file.id}" title="Copiar enlace">
+                                        <i data-lucide="copy" class="w-5 h-5"></i>
+                                    </button>
+                                    <button class="p-2 hover:bg-red-500/20 rounded-lg text-red-400 delete-file-btn" data-id="${file.id}" title="Eliminar">
+                                        <i data-lucide="trash-2" class="w-5 h-5"></i>
+                                    </button>
+                                </div>
                             </div>
-                        `;
+                        </div>
+                    `).join('');
 
-                        filesList.appendChild(fileItem);
-
-                        // Botón copiar enlace
-                        fileItem.querySelector('.copy-link-btn').addEventListener('click', () => {
-                            const url = `${window.location.origin}/share/${file.id}`;
-                            navigator.clipboard.writeText(url).then(() => {
-                                const btn = fileItem.querySelector('.copy-link-btn');
-                                btn.innerHTML = '<i data-lucide="check" class="icon text-white" style="width:1rem; height:1rem;"></i>';
-                                setTimeout(() => {
-                                    btn.innerHTML = '<i data-lucide="copy" class="icon text-white" style="width:1rem; height:1rem;"></i>';
-                                    lucide.createIcons();
-                                }, 2000);
-                                lucide.createIcons();
-                            });
+                    // Event listeners
+                    listContainer.querySelectorAll('.copy-link-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const url = `${window.location.origin}/share/${btn.dataset.id}`;
+                            navigator.clipboard.writeText(url);
+                            showNotification('Enlace copiado', 'success');
                         });
+                    });
 
-                        // Botón eliminar archivo
-                        fileItem.querySelector('.delete-file-btn').addEventListener('click', async () => {
+                    listContainer.querySelectorAll('.delete-file-btn').forEach(btn => {
+                        btn.addEventListener('click', async () => {
                             const confirmed = await showConfirmDialog({
-                                title: 'Eliminar archivo',
-                                message: `Se eliminará "${file.originalName}" y su enlace dejará de estar disponible.`,
-                                confirmText: 'Eliminar archivo',
-                                cancelText: 'Cancelar',
-                                tone: 'danger',
-                                icon: 'trash-2'
+                                title: 'Eliminar Archivo',
+                                message: '¿Estás seguro de que deseas eliminar este archivo permanentemente?',
+                                confirmText: 'Eliminar',
+                                tone: 'danger'
                             });
-                            if (!confirmed) return;
 
-                            try {
-                                const res = await fetch(`/api/user/files/${file.id}`, {
-                                    method: 'DELETE',
-                                    credentials: 'include'
-                                });
-
-                                if (res.ok) {
-                                    fileItem.remove();
-                                    if (filesList.children.length === 0) {
-                                        filesList.innerHTML = '<p class="text-center text-gray-500 py-8">No has subido ningún archivo aún.</p>';
-                                    }
-                                    showNotification('Archivo eliminado correctamente.', 'success');
-                                } else {
-                                    const data = await res.json();
-                                    showNotification(data?.message || 'No se pudo eliminar el archivo.', 'error');
+                            if (confirmed) {
+                                try {
+                                    await fetch(`/api/user/files/${btn.dataset.id}`, { method: 'DELETE' });
+                                    loadUserFiles(); // Recargar lista
+                                    showNotification('Archivo eliminado', 'success');
+                                } catch (err) {
+                                    showNotification('Error al eliminar', 'error');
                                 }
-                            } catch (err) {
-                                showNotification('Error de conexión', 'error');
                             }
                         });
                     });
@@ -3323,55 +3405,179 @@
                     lucide.createIcons();
 
                 } catch (err) {
-                    console.error('Error al cargar archivos del usuario:', err);
-                    const message = err.message && err.message.toLowerCase().includes('autoriz')
-                        ? 'Tu sesión ha expirado. Inicia sesión nuevamente para ver tus archivos.'
-                        : 'Hubo un problema al cargar tus archivos. Por favor, intenta de nuevo.';
-                    filesList.innerHTML = `<p class="text-center text-red-500 py-8">${message}</p>`;
-                    const countEl = document.getElementById('dashboard-file-count');
-                    const downloadsEl = document.getElementById('dashboard-total-downloads');
-                    const latestEl = document.getElementById('dashboard-latest-file');
-                    if (countEl) countEl.textContent = '—';
-                    if (downloadsEl) downloadsEl.textContent = '—';
-                    if (latestEl) latestEl.textContent = 'Sin datos';
+                    console.error('Error loading user files:', err);
+                    listContainer.innerHTML = '<p class="text-center text-red-400 py-8">Error al cargar archivos.</p>';
                 }
             }
-            
-            // --- Lógica del Tema (Claro/Oscuro) ---
+
+            function loadSettingsView() {
+                rememberLastView('settings');
+                const template = document.getElementById('settings-view-template').content.cloneNode(true);
+                appContainer.innerHTML = '';
+                appContainer.appendChild(template);
+
+                document.getElementById('back-to-dashboard').addEventListener('click', () => navigateTo('/dashboard'));
+
+                // Cargar datos actuales
+                document.getElementById('profile-email').value = currentUser.email;
+                document.getElementById('profile-username').value = currentUser.username;
+
+                // Update Profile
+                const profileForm = document.getElementById('update-profile-form');
+                const profileMsg = document.getElementById('profile-update-message');
+                
+                profileForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const email = document.getElementById('profile-email').value;
+                    const username = document.getElementById('profile-username').value;
+                    
+                    try {
+                        const res = await fetch('/api/user/update-profile', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email, username })
+                        });
+                        
+                        const data = await res.json();
+                        
+                        profileMsg.textContent = data.message;
+                        profileMsg.classList.remove('hidden');
+                        
+                        if (res.ok) {
+                            profileMsg.className = 'mt-3 p-3 rounded-lg text-sm bg-green-500/20 text-green-400';
+                            currentUser = data.user;
+                            updateUserMenu();
+                        } else {
+                            profileMsg.className = 'mt-3 p-3 rounded-lg text-sm bg-red-500/20 text-red-400';
+                        }
+                    } catch (err) {
+                        profileMsg.textContent = 'Error de conexión';
+                        profileMsg.className = 'mt-3 p-3 rounded-lg text-sm bg-red-500/20 text-red-400';
+                        profileMsg.classList.remove('hidden');
+                    }
+                });
+
+                // Change Password
+                const pwdForm = document.getElementById('change-password-form');
+                const pwdMsg = document.getElementById('password-change-message');
+                
+                pwdForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const currentPassword = document.getElementById('current-password').value;
+                    const newPassword = document.getElementById('new-password').value;
+                    
+                    try {
+                        const res = await fetch('/api/user/change-password', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ currentPassword, newPassword })
+                        });
+                        
+                        const data = await res.json();
+                        
+                        pwdMsg.textContent = data.message;
+                        pwdMsg.classList.remove('hidden');
+                        
+                        if (res.ok) {
+                            pwdMsg.className = 'mt-3 p-3 rounded-lg text-sm bg-green-500/20 text-green-400';
+                            pwdForm.reset();
+                        } else {
+                            pwdMsg.className = 'mt-3 p-3 rounded-lg text-sm bg-red-500/20 text-red-400';
+                        }
+                    } catch (err) {
+                        pwdMsg.textContent = 'Error de conexión';
+                        pwdMsg.className = 'mt-3 p-3 rounded-lg text-sm bg-red-500/20 text-red-400';
+                        pwdMsg.classList.remove('hidden');
+                    }
+                });
+
+                // Delete Account
+                document.getElementById('delete-account-btn').addEventListener('click', () => {
+                    const template = document.getElementById('delete-account-modal-template').content.cloneNode(true);
+                    document.body.appendChild(template);
+                    
+                    const overlay = document.getElementById('delete-modal-overlay');
+                    const form = document.getElementById('delete-account-form');
+                    const cancelBtn = document.getElementById('cancel-delete-btn');
+                    const errorEl = document.getElementById('delete-error');
+                    
+                    const close = () => overlay.remove();
+                    
+                    cancelBtn.onclick = close;
+                    overlay.onclick = (e) => { if(e.target === overlay) close(); };
+                    
+                    form.onsubmit = async (e) => {
+                        e.preventDefault();
+                        const password = document.getElementById('delete-password').value;
+                        
+                        try {
+                            const res = await fetch('/api/user/account', {
+                                method: 'DELETE',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ password })
+                            });
+                            
+                            const data = await res.json();
+                            
+                            if (res.ok) {
+                                window.location.href = '/';
+                            } else {
+                                errorEl.textContent = data.message;
+                                errorEl.classList.remove('hidden');
+                            }
+                        } catch (err) {
+                            errorEl.textContent = 'Error de conexión';
+                            errorEl.classList.remove('hidden');
+                        }
+                    };
+               
+                });
+            }
+
+            function formatBytes(bytes, decimals = 2) {
+                if (!+bytes) return '0 Bytes';
+                const k = 1024;
+                const dm = decimals < 0 ? 0 : decimals;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+            }
+
+            // --- Theme Logic ---
             const themeToggle = document.getElementById('themeToggle');
+            const html = document.documentElement;
             
-            function setTheme(isDark) {
-                const htmlEl = document.documentElement;
-                if (isDark) {
-                    htmlEl.classList.remove('light');
-                    htmlEl.classList.add('dark');
-                    htmlEl.setAttribute('data-theme', 'dark');
-                    localStorage.theme = 'dark';
-                } else {
-                    htmlEl.classList.remove('dark');
-                    htmlEl.classList.add('light');
-                    htmlEl.setAttribute('data-theme', 'light');
-                    localStorage.theme = 'light';
-                }
-                lucide.createIcons(); // Refrescar iconos
+            // Check local storage or system preference
+            const savedTheme = localStorage.getItem('theme');
+            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            
+            if (savedTheme) {
+                html.classList.remove('light', 'dark');
+                html.classList.add(savedTheme);
+                html.setAttribute('data-theme', savedTheme);
+            } else {
+                html.classList.remove('light', 'dark');
+                html.classList.add(systemTheme);
+                html.setAttribute('data-theme', systemTheme);
             }
-            
-            // Event listener para el toggle
-            themeToggle.addEventListener('click', () => {
-                const isDark = document.documentElement.classList.contains('dark');
-                setTheme(!isDark);
+
+            if (themeToggle) {
+                themeToggle.addEventListener('click', () => {
+                    const isDark = html.classList.contains('dark');
+                    const newTheme = isDark ? 'light' : 'dark';
+                    
+                    html.classList.remove('light', 'dark');
+                    html.classList.add(newTheme);
+                    html.setAttribute('data-theme', newTheme);
+                    localStorage.setItem('theme', newTheme);
+                });
+            }
+
+            // --- Initialization ---
+            checkAuthStatus().then(() => {
+                renderRoute(window.location.pathname);
             });
 
-            // Aplicar tema guardado al cargar
-            if (localStorage.theme === 'dark') {
-                setTheme(true); // Tema oscuro
-            } else {
-                // Por defecto claro
-                setTheme(false); // Tema claro
-            }
-
-            // --- Renderizar Iconos Lucide ---
-            lucide.createIcons();
         });
     </script>
     
@@ -3381,35 +3587,120 @@
             <div class="footer-brand">
                 <div class="footer-logo">
                     <div class="footer-logo-icon">
-                        <img src="/assets/branding/cloudbox-labs-logo.svg" alt="Cloudbox Labs" width="32" height="32">
+                        <img id="footer-logo-img" src="/assets/branding/sendu-light.svg" alt="Logo" class="branding-loading">
                     </div>
-                    Cloudbox Labs
+                    <span id="footer-brand-name" class="branding-loading">Sendu</span>
                 </div>
-                <p class="footer-tagline">
-                    Herramientas profesionales para la gestión y conversión de documentos.
+                <p id="footer-tagline" class="footer-tagline branding-loading">
+                    Envía y comparte archivos de forma segura.
                 </p>
             </div>
             
             <div class="footer-section">
                 <h3>Contacto</h3>
-                <div class="footer-links">
-                    <a href="mailto:contacto@cloudboxlabs.com" class="footer-link">Email</a>
-                    <a href="tel:+1234567890" class="footer-link">Teléfono</a>
-                    <a href="#" class="footer-link">Soporte</a>
+                <div id="footer-contact-links" class="footer-links">
+                    <!-- Links dinámicos -->
                 </div>
             </div>
             
             <div class="footer-section">
                 <h3>Más de nosotros</h3>
-                <div class="footer-links">
-                    <a href="https://cloudbox.com" class="footer-link" target="_blank">Cloudbox</a>
-                    <a href="https://sendu.com" class="footer-link" target="_blank">Sendu</a>
-                    <a href="#" class="footer-link">Próximamente</a>
+                <div id="footer-more-links" class="footer-links">
+                    <!-- Links dinámicos -->
                 </div>
             </div>
         </div>
 
         <script>
+            // Cargar configuración de marca (Header y Footer)
+            async function loadBrandingSettings() {
+                try {
+                    const res = await fetch('/api/settings/footer');
+                    if (!res.ok) return;
+                    const config = await res.json();
+                    
+                    // Aplicar configuración al Footer
+                    const brandNameEl = document.getElementById('footer-brand-name');
+                    const taglineEl = document.getElementById('footer-tagline');
+                    const footerLogoImgEl = document.getElementById('footer-logo-img');
+                    const contactLinksEl = document.getElementById('footer-contact-links');
+                    const moreLinksEl = document.getElementById('footer-more-links');
+                    
+                    if (brandNameEl) {
+                        if (config.hideFooterName) {
+                            brandNameEl.style.display = 'none';
+                        } else {
+                            brandNameEl.style.display = '';
+                            brandNameEl.textContent = config.brandName || 'Sendu';
+                        }
+                    }
+                    if (taglineEl) taglineEl.textContent = config.tagline || '';
+                    
+                    // Aplicar configuración al Header
+                    const headerLogoLight = document.querySelector('.brand-logo.logo-light');
+                    const headerLogoDark = document.querySelector('.brand-logo.logo-dark');
+                    const headerBrandNameEl = document.getElementById('header-brand-name');
+
+                    if (headerBrandNameEl) {
+                        if (config.hideHeaderName) {
+                            headerBrandNameEl.style.display = 'none';
+                        } else {
+                            headerBrandNameEl.style.display = '';
+                            headerBrandNameEl.textContent = config.headerBrandName || config.brandName || 'Sendu';
+                        }
+                    }
+                    
+                    if (headerLogoLight && config.logoLight) {
+                        headerLogoLight.src = config.logoLight;
+                    }
+                    if (headerLogoDark && config.logoDark) {
+                        headerLogoDark.src = config.logoDark;
+                    }
+
+                    // Lógica de logo del footer (adaptable al tema)
+                    if (footerLogoImgEl) {
+                        const updateFooterLogo = () => {
+                            const isDark = document.documentElement.classList.contains('dark');
+                            footerLogoImgEl.src = isDark ? (config.logoDark || config.logoLight) : (config.logoLight || config.logoDark);
+                        };
+                        
+                        updateFooterLogo();
+                        
+                        // Observer para cambio de tema
+                        const observer = new MutationObserver((mutations) => {
+                            mutations.forEach((mutation) => {
+                                if (mutation.attributeName === 'class') {
+                                    updateFooterLogo();
+                                }
+                            });
+                        });
+                        observer.observe(document.documentElement, { attributes: true });
+                    }
+
+                    // Renderizar links del footer
+                    const renderLinks = (container, links) => {
+                        if (!container || !links) return;
+                        container.innerHTML = links.map(link => 
+                            `<a href="${link.url}" class="footer-link" target="_blank">${link.text}</a>`
+                        ).join('');
+                    };
+
+                    renderLinks(contactLinksEl, config.contactLinks);
+                    renderLinks(moreLinksEl, config.moreLinks);
+
+                } catch (err) {
+                    console.error('Error cargando branding settings:', err);
+                } finally {
+                    // Mostrar elementos una vez cargados (o si falla)
+                    document.querySelectorAll('.branding-loading').forEach(el => {
+                        el.classList.remove('branding-loading');
+                    });
+                }
+            }
+            
+            // Iniciar carga
+            document.addEventListener('DOMContentLoaded', loadBrandingSettings);
+
             // Año dinámico del footer
             (function(){
                 const y = new Date().getFullYear();
