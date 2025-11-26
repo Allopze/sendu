@@ -26,6 +26,23 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+    <!-- Script de inicialización de tema (Anti-flash) -->
+    <script>
+        (function() {
+            try {
+                const savedTheme = localStorage.getItem('sendu:theme');
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+                
+                document.documentElement.classList.toggle('dark', theme === 'dark');
+                document.documentElement.classList.toggle('light', theme === 'light');
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (e) {
+                console.error('Error initializing theme:', e);
+            }
+        })();
+    </script>
+
     <style>
         /* Variables CSS */
         :root {
@@ -1980,6 +1997,8 @@
                 const isDark = theme === 'dark';
                 // Sincronizar clase 'dark' (para Tailwind)
                 document.documentElement.classList.toggle('dark', isDark);
+                // Sincronizar clase 'light' (para estilos custom)
+                document.documentElement.classList.toggle('light', !isDark);
                 // Sincronizar data-theme (para CSS custom)
                 document.documentElement.setAttribute('data-theme', theme);
             };
