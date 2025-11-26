@@ -152,6 +152,7 @@ ensureColumn('users', 'isVerified', 'isVerified INTEGER DEFAULT 0');
 ensureColumn('users', 'verificationToken', 'verificationToken TEXT');
 
 // --- Middlewares ---
+// Configuración de Helmet adaptada para HTTP/HTTPS
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -163,8 +164,16 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "blob:"],
       connectSrc: ["'self'"],
       objectSrc: ["'none'"],
+      // Solo forzar HTTPS en producción con cookie segura
+      upgradeInsecureRequests: sessionCookieSecure ? [] : null,
     },
   },
+  // Desactivar headers problemáticos en HTTP (sin SSL)
+  crossOriginOpenerPolicy: sessionCookieSecure ? { policy: "same-origin" } : false,
+  crossOriginEmbedderPolicy: false,
+  originAgentCluster: sessionCookieSecure,
+  // HSTS solo cuando hay HTTPS real
+  hsts: sessionCookieSecure ? { maxAge: 31536000, includeSubDomains: true } : false,
 }));
 
 // Rate Limiters
