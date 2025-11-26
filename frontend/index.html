@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" class="light" data-theme="light"> <!-- Iniciar en modo claro por defecto -->
+<html lang="es" data-theme="light"> <!-- El tema se configura via JS al cargar -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -193,6 +193,11 @@
             opacity: 1;
             transform: translateY(-50%) scale(1);
         }
+        
+        [data-theme="dark"] .theme-icon.sun {
+            opacity: 0;
+            transform: translateY(-50%) scale(0.6);
+        }
 
         [data-theme="light"] .theme-icon.sun {
             opacity: 1;
@@ -214,6 +219,10 @@
             transition: transform 0.3s ease;
             box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4);
             left: 4px;
+        }
+        
+        [data-theme="dark"] .theme-toggle::before {
+            transform: translateX(0);
         }
 
         [data-theme="light"] .theme-toggle::before {
@@ -1963,13 +1972,23 @@
             const initTheme = () => {
                 const savedTheme = localStorage.getItem('sendu:theme');
                 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                const isDark = savedTheme ? savedTheme === 'dark' : prefersDark;
+                const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+                applyTheme(theme);
+            };
+            
+            const applyTheme = (theme) => {
+                const isDark = theme === 'dark';
+                // Sincronizar clase 'dark' (para Tailwind)
                 document.documentElement.classList.toggle('dark', isDark);
+                // Sincronizar data-theme (para CSS custom)
+                document.documentElement.setAttribute('data-theme', theme);
             };
             
             const toggleTheme = () => {
-                const isDark = document.documentElement.classList.toggle('dark');
-                localStorage.setItem('sendu:theme', isDark ? 'dark' : 'light');
+                const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                applyTheme(newTheme);
+                localStorage.setItem('sendu:theme', newTheme);
             };
             
             // Initialize theme immediately

@@ -30,7 +30,7 @@ npm-debug.log*
 # --- Build/Dist ---
 dist/
 build/
-frontend/dist/
+# frontend/dist/ - NO IGNORAR: contiene Tailwind compilado necesario para producción
 
 # --- Sistema operativo ---
 .DS_Store
