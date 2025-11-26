@@ -220,8 +220,8 @@ app.use(session({
 }));
 
 // ¡Crítico para proxies inversos! (Nginx, Caddy, Cloudflare)
-// Confía en el header X-Forwarded-For para obtener la IP real del cliente.
-app.set('trust proxy', true);
+// Usamos '1' para confiar en el primer proxy (PaaS/Docker). 'true' es inseguro y bloquea express-rate-limit.
+app.set('trust proxy', 1);
 
 // Middleware de detección LAN/WAN
 const stripTrailingSlash = (value) => {
