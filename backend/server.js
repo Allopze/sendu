@@ -10,7 +10,7 @@ import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 import session from 'express-session';
 import bcrypt from 'bcrypt';
-import connectSqlite3 from 'connect-sqlite3';
+import SqliteStore from 'better-sqlite3-session-store';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import nodemailer from 'nodemailer';
@@ -28,9 +28,8 @@ const DB_PATH = path.join(__dirname, '../db.sqlite');
 const FRONTEND_PATH = path.join(__dirname, '../frontend');
 const CHUNKS_PATH = path.join(STORAGE_PATH, 'chunks');
 const fsp = fs.promises;
-const SQLiteStore = connectSqlite3(session);
-const SESSION_DB_DIR = path.dirname(DB_PATH);
-const SESSION_DB_NAME = process.env.SESSION_DB_NAME || 'sessions.sqlite';
+const BetterSqlite3Store = SqliteStore(session);
+const SESSION_DB_PATH = path.join(path.dirname(DB_PATH), process.env.SESSION_DB_NAME || 'sessions.sqlite');
 const SESSION_SECRET = process.env.SESSION_SECRET || process.env.PASSWORD_SECRET || 'default-secret-change-this';
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -202,13 +201,15 @@ app.use(cors({
 app.use(express.json()); // Parsear JSON
 app.use(express.urlencoded({ extended: true })); // Parsear form-data
 
-// Configurar sesiones persistentes en SQLite
+// Configurar sesiones persistentes en SQLite (usando better-sqlite3)
+const sessionDb = new Database(SESSION_DB_PATH);
 app.use(session({
-  store: new SQLiteStore({
-    db: SESSION_DB_NAME,
-    dir: SESSION_DB_DIR,
-    concurrentDB: false,
-    cleanupInterval: 24 * 60 * 60 * 1000 // limpiar sesiones expiradas una vez al día
+  store: new BetterSqlite3Store({
+    client: sessionDb,
+    expired: {
+      clear: true,
+      intervalMs: 24 * 60 * 60 * 1000 // limpiar sesiones expiradas una vez al día
+    }
   }),
   name: process.env.SESSION_COOKIE_NAME || 'sendu.sid',
   secret: SESSION_SECRET,
