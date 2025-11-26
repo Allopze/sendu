@@ -3,12 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sendu - Comparte archivos de forma segura y rápida. Subida de archivos hasta 10GB con cifrado y enlaces temporales.">
+    <meta name="theme-color" content="#dc2626">
     <title>Sendu - Compartir Archivos</title>
     <!-- Favicons -->
     <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg">
     <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
     <link rel="shortcut icon" href="/assets/icons/favicon.ico">
     <link rel="mask-icon" href="/assets/icons/favicon.svg" color="#dc2626">
+    <link rel="apple-touch-icon" href="/assets/icons/favicon.svg">
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
     <!-- Tailwind CSS (build) -->
     <link rel="stylesheet" href="/dist/tailwind.css">
     <!-- Lucide Icons -->
@@ -43,6 +48,60 @@
             font-family: 'Inter', sans-serif;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Screen reader only - Accesibilidad */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+        
+        /* Focus visible para accesibilidad de teclado */
+        :focus-visible {
+            outline: 2px solid #dc2626;
+            outline-offset: 2px;
+        }
+        
+        /* Skip link para navegación por teclado */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: #dc2626;
+            color: white;
+            padding: 8px 16px;
+            z-index: 100;
+            transition: top 0.2s;
+        }
+        
+        .skip-link:focus {
+            top: 0;
+        }
+        
+        /* Modo offline */
+        body.offline-mode::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #f59e0b, #dc2626, #f59e0b);
+            background-size: 200% 100%;
+            animation: offline-indicator 2s linear infinite;
+            z-index: 9999;
+        }
+        
+        @keyframes offline-indicator {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
         }
 
         /* Iconos Lucide */
@@ -823,18 +882,21 @@
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 dark:bg-slate-900 dark:text-slate-200 overflow-x-hidden transition-colors duration-300">
+    <!-- Skip link para navegación por teclado -->
+    <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+    
     <!-- Notificación global -->
-    <div id="global-notification" class="fixed inset-x-0 top-4 z-50 justify-center px-4 pointer-events-none hidden">
+    <div id="global-notification" class="fixed inset-x-0 top-4 z-50 justify-center px-4 pointer-events-none hidden" role="status" aria-live="polite">
         <div id="global-notification-content" class="max-w-lg w-full px-4 py-3 rounded-lg shadow-lg text-sm font-medium text-white text-center bg-slate-800/90 backdrop-blur"></div>
     </div>
 
     <!-- Navbar -->
-    <nav class="fixed top-0 left-0 right-0 z-50 glass-container px-6 py-3 flex items-center justify-between">
+    <nav class="fixed top-0 left-0 right-0 z-50 glass-container px-6 py-3 flex items-center justify-between" role="navigation" aria-label="Navegación principal">
         <!-- Logo y nombre -->
         <a id="home-link" class="flex items-center gap-3 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded-lg px-1" aria-label="Ir al inicio de Sendu" href="/">
             <div class="flex items-center justify-center">
-                <img src="/assets/branding/sendu-light.svg" alt="Sendu" class="brand-logo logo-light branding-loading">
-                <img src="/assets/branding/sendu-dark.svg" alt="Sendu" class="brand-logo logo-dark branding-loading">
+                <img src="/assets/branding/sendu-light.svg" alt="" class="brand-logo logo-light branding-loading" aria-hidden="true">
+                <img src="/assets/branding/sendu-dark.svg" alt="" class="brand-logo logo-dark branding-loading" aria-hidden="true">
             </div>
             <div>
                 <h1 id="header-brand-name" class="text-lg font-bold text-gray-800 dark:text-white branding-loading">Sendu</h1>
@@ -845,7 +907,7 @@
         <div class="navbar-actions flex items-center gap-3">
             <!-- Menú de usuario -->
             <div class="user-menu-container">
-                <button class="user-menu-button" id="user-menu-btn" aria-label="Menú de usuario">
+                <button class="user-menu-button" id="user-menu-btn" aria-label="Abrir menú de usuario" aria-haspopup="true" aria-expanded="false">
                     <i data-lucide="user" style="width: 20px; height: 20px;"></i>
                 </button>
                 
@@ -862,9 +924,11 @@
     </nav>
 
     <!-- Contenedor principal -->
-    <div id="app-container" class="min-h-screen w-full flex items-center justify-center p-4 transition-all duration-300">
-        <!-- El contenido de la vista se inyecta dinámicamente -->
-    </div>
+    <main id="main-content" role="main" aria-label="Contenido principal">
+        <div id="app-container" class="min-h-screen w-full flex items-center justify-center p-4 transition-all duration-300">
+            <!-- El contenido de la vista se inyecta dinámicamente -->
+        </div>
+    </main>
 
     <!-- Modal de confirmación genérico -->
     <template id="confirm-dialog-template">
@@ -896,24 +960,28 @@
             <div class="glass-container p-8 md:p-12">
                 <!-- Header -->
                 <div class="text-center space-y-4 mb-12">
-                    <h2 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">Sube tu archivo</h2>
+                    <h2 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white" id="upload-heading">Sube tus archivos</h2>
                     <p class="text-xl text-gray-800 dark:text-gray-100 font-medium">Arrastra y suelta o haz clic para seleccionar</p>
                 </div>
 
             <!-- Dropzone Principal -->
-            <form id="upload-form">
-                <label for="file-input" id="drop-zone" class="relative w-full h-80 md:h-96 border-3 border-dashed border-blue-400 dark:border-gray-500 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-500 hover:border-blue-500 dark:hover:border-indigo-400 hover:bg-blue-50 dark:hover:bg-white/10 hover:scale-105">
-                    <i data-lucide="upload-cloud" class="w-20 h-20 md:w-24 md:h-24 text-blue-600 dark:text-gray-200 mb-4 stroke-1"></i>
-                    <span id="drop-main-text" class="font-bold text-xl md:text-2xl text-gray-900 dark:text-white mb-2">Arrastra tu archivo aquí</span>
-                    <span id="drop-sub-text" class="text-base text-gray-700 dark:text-gray-200 mb-4">o haz clic para seleccionar</span>
-                    <span class="text-sm text-gray-600 dark:text-gray-300 px-4 py-2 bg-white/70 dark:bg-white/10 rounded-full">Tamaño máximo: 10GB</span>
-                    <input type="file" id="file-input" class="file-input">
+            <form id="upload-form" aria-labelledby="upload-heading">
+                <label for="file-input" id="drop-zone" class="relative w-full h-80 md:h-96 border-3 border-dashed border-blue-400 dark:border-gray-500 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-500 hover:border-blue-500 dark:hover:border-indigo-400 hover:bg-blue-50 dark:hover:bg-white/10 hover:scale-105 focus-within:ring-4 focus-within:ring-blue-400/50" role="region" aria-label="Zona de arrastrar y soltar archivos" tabindex="0">
+                    <i data-lucide="upload-cloud" class="w-20 h-20 md:w-24 md:h-24 text-blue-600 dark:text-gray-200 mb-4 stroke-1" aria-hidden="true"></i>
+                    <span id="drop-main-text" class="font-bold text-xl md:text-2xl text-gray-900 dark:text-white mb-2">Arrastra tus archivos aquí</span>
+                    <span id="drop-sub-text" class="text-base text-gray-700 dark:text-gray-200 mb-4">o haz clic para seleccionar (múltiples archivos permitidos)</span>
+                    <span class="text-sm text-gray-600 dark:text-gray-300 px-4 py-2 bg-white/70 dark:bg-white/10 rounded-full">Tamaño máximo: 10GB por archivo</span>
+                    <input type="file" id="file-input" class="file-input" multiple aria-describedby="file-input-help">
+                    <span id="file-input-help" class="sr-only">Selecciona uno o más archivos para subir. Tamaño máximo 10GB por archivo.</span>
+                    
+                    <!-- Badge de archivos seleccionados -->
+                    <div id="files-count-badge" class="absolute top-4 right-4 bg-blue-600 text-white text-sm font-bold px-3 py-1 rounded-full hidden" aria-live="polite"></div>
                     
                     <!-- Overlay al arrastrar -->
                     <div id="drop-overlay" class="absolute inset-0 bg-gradient-to-br from-indigo-500/60 to-purple-600/60 rounded-2xl flex items-center justify-center text-white text-4xl font-bold opacity-0 transition-all duration-300 pointer-events-none backdrop-blur-sm">
                         <div class="text-center">
-                            <i data-lucide="download" class="w-16 h-16 mx-auto mb-4"></i>
-                            ¡Suelta el archivo aquí!
+                            <i data-lucide="download" class="w-16 h-16 mx-auto mb-4" aria-hidden="true"></i>
+                            ¡Suelta los archivos aquí!
                         </div>
                     </div>
                 </label>
@@ -955,10 +1023,14 @@
                         </div>
                         
                         <!-- Botón de subir -->
-                        <div class="mt-8 text-center flex justify-center">
-                            <button type="button" id="start-upload" class="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 text-lg shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center gap-3 mx-auto">
-                                <i data-lucide="upload" class="w-5 h-5"></i>
-                                Subir archivo
+                        <div class="mt-8 text-center flex justify-center gap-4">
+                            <button type="button" id="clear-selection" class="glass-button py-4 px-6 rounded-xl transition-all duration-300 text-lg flex items-center justify-center gap-3 opacity-50 pointer-events-none" disabled aria-label="Limpiar selección de archivos">
+                                <i data-lucide="x" class="w-5 h-5" aria-hidden="true"></i>
+                                Limpiar
+                            </button>
+                            <button type="button" id="start-upload" class="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 text-lg shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center gap-3" aria-label="Iniciar subida de archivos">
+                                <i data-lucide="upload" class="w-5 h-5" aria-hidden="true"></i>
+                                <span id="upload-btn-text">Subir archivos</span>
                             </button>
                         </div>
                     </div>
@@ -1830,37 +1902,42 @@
     
     <!-- Template para item de progreso -->
     <template id="upload-item-template">
-        <div class="bg-blue-50 dark:bg-white/10 p-6 rounded-xl space-y-4 upload-item" role="progressbar">
+        <div class="bg-blue-50 dark:bg-white/10 p-6 rounded-xl space-y-4 upload-item" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Progreso de subida">
             <div class="flex justify-between items-center">
-                <span class="file-name text-lg font-semibold text-gray-800 dark:text-white truncate max-w-[300px]">file.name</span>
+                <span class="file-name text-lg font-semibold text-gray-800 dark:text-white truncate max-w-[300px]" aria-live="polite">file.name</span>
                 <div class="flex items-center gap-3">
-                    <span class="status-text text-base text-gray-600 dark:text-gray-200 font-medium">Subiendo...</span>
-                    <button class="cancel-upload-btn glass-button p-2 rounded-lg hover:bg-red-500/30 transition-colors hidden" title="Cancelar subida">
-                        <i data-lucide="x" class="w-5 h-5 text-red-400"></i>
+                    <span class="status-text text-base text-gray-600 dark:text-gray-200 font-medium" aria-live="polite">Subiendo...</span>
+                    <button class="cancel-upload-btn glass-button p-2 rounded-lg hover:bg-red-500/30 transition-colors hidden" title="Cancelar subida" aria-label="Cancelar subida">
+                        <i data-lucide="x" class="w-5 h-5 text-red-400" aria-hidden="true"></i>
                     </button>
                 </div>
             </div>
             <div class="space-y-2">
-                <progress class="w-full h-3 rounded-lg" value="0" max="100" style="display: block; height: 16px;"></progress>
+                <progress class="w-full h-4 rounded-lg upload-progress" value="0" max="100" style="display: block;"></progress>
                 <div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
-                    <span class="progress-detail">Preparando...</span>
-                    <span class="speed-text"></span>
+                    <span class="progress-detail" aria-live="polite">Preparando...</span>
+                    <span class="speed-text" aria-live="polite"></span>
+                </div>
+                <div class="flex justify-between items-center text-xs text-gray-600 dark:text-gray-300">
+                    <span class="bytes-uploaded"></span>
+                    <span class="eta-text"></span>
                 </div>
             </div>
             <div class="result-link hidden">
-                <input type="text" readonly class="glass-button w-full px-4 py-3 rounded-xl text-base text-blue-600 dark:text-indigo-300 focus:outline-none mb-3">
+                <label for="upload-result-url" class="sr-only">Enlace de descarga</label>
+                <input type="text" readonly id="upload-result-url" class="glass-button w-full px-4 py-3 rounded-xl text-base text-blue-600 dark:text-indigo-300 focus:outline-none mb-3" aria-label="Enlace de descarga del archivo">
                 <div class="flex gap-2">
-                    <button class="copy-button glass-button px-4 py-3 rounded-xl text-base flex items-center gap-2 text-gray-700 hover:scale-105 transition-transform flex-1">
-                        <i data-lucide="copy" class="w-5 h-5"></i>
+                    <button class="copy-button glass-button px-4 py-3 rounded-xl text-base flex items-center gap-2 text-gray-700 hover:scale-105 transition-transform flex-1" aria-label="Copiar enlace al portapapeles">
+                        <i data-lucide="copy" class="w-5 h-5" aria-hidden="true"></i>
                         Copiar enlace
                     </button>
-                    <button class="delete-upload-btn glass-button px-4 py-3 rounded-xl text-base flex items-center gap-2 text-red-400 hover:bg-red-500/30 transition-colors" title="Eliminar archivo">
-                        <i data-lucide="trash-2" class="w-5 h-5"></i>
+                    <button class="delete-upload-btn glass-button px-4 py-3 rounded-xl text-base flex items-center gap-2 text-red-400 hover:bg-red-500/30 transition-colors" title="Eliminar archivo" aria-label="Eliminar archivo subido">
+                        <i data-lucide="trash-2" class="w-5 h-5" aria-hidden="true"></i>
                         Eliminar
                     </button>
                 </div>
             </div>
-            <div class="error-message hidden bg-red-500/50 text-white p-3 rounded-lg text-center text-sm"></div>
+            <div class="error-message hidden bg-red-500/50 text-white p-3 rounded-lg text-center text-sm" role="alert" aria-live="assertive"></div>
         </div>
     </template>
 
@@ -2418,7 +2495,7 @@
                     if (data.recentFiles) {
                         topFilesList.innerHTML = data.recentFiles.map(f => `
                             <div class="flex justify-between text-sm p-2 bg-white/5 rounded">
-                                <span class="truncate flex-1">${f.originalName}</span>
+                                <span class="truncate flex-1">${escapeHtml(f.originalName)}</span>
                                 <span class="text-gray-400">${f.downloadCount} descargas</span>
                             </div>
                         `).join('');
@@ -2429,7 +2506,7 @@
                     if (data.users) {
                          topUsersList.innerHTML = data.users.slice(0, 5).map(u => `
                             <div class="flex justify-between text-sm p-2 bg-white/5 rounded">
-                                <span>${u.username}</span>
+                                <span>${escapeHtml(u.username)}</span>
                                 <span class="text-gray-400">${new Date(u.createdAt).toLocaleDateString()}</span>
                             </div>
                         `).join('');
@@ -2454,11 +2531,11 @@
                         
                         tbody.innerHTML = data.users.map(u => `
                             <tr class="border-b border-gray-700 hover:bg-white/5">
-                                <td class="py-3 px-2 text-left align-middle">${u.username}</td>
-                                <td class="py-3 px-2 text-left align-middle">${u.email}</td>
+                                <td class="py-3 px-2 text-left align-middle">${escapeHtml(u.username)}</td>
+                                <td class="py-3 px-2 text-left align-middle">${escapeHtml(u.email)}</td>
                                 <td class="py-3 px-2 text-left align-middle">
                                     <span class="px-2 py-1 rounded text-xs ${u.role === 'admin' ? 'bg-red-500/20 text-white' : 'bg-blue-500/20 text-blue-400'}">
-                                        ${u.role}
+                                        ${escapeHtml(u.role)}
                                     </span>
                                 </td>
                                 <td class="py-3 px-2 text-left align-middle">${u.fileCount}</td>
@@ -2467,14 +2544,14 @@
                                 <td class="py-3 px-2 text-left align-middle">
                                     <div class="flex gap-2">
                                         <button class="text-blue-400 hover:text-blue-300 edit-user-btn" 
-                                            data-id="${u.id}" 
-                                            data-username="${u.username}" 
-                                            data-email="${u.email}" 
-                                            data-role="${u.role}"
+                                            data-id="${escapeHtml(u.id)}" 
+                                            data-username="${escapeHtml(u.username)}" 
+                                            data-email="${escapeHtml(u.email)}" 
+                                            data-role="${escapeHtml(u.role)}"
                                             title="Editar usuario">
                                             <i data-lucide="edit-2" class="w-4 h-4"></i>
                                         </button>
-                                        <button class="text-red-400 hover:text-red-300 delete-user-btn" data-id="${u.id}" title="Eliminar usuario">
+                                        <button class="text-red-400 hover:text-red-300 delete-user-btn" data-id="${escapeHtml(u.id)}" title="Eliminar usuario">
                                             <i data-lucide="trash-2" class="w-4 h-4"></i>
                                         </button>
                                     </div>
@@ -2582,13 +2659,13 @@
                         
                         tbody.innerHTML = data.files.map(f => `
                             <tr class="border-b border-gray-300 dark:border-slate-700 hover:bg-white/5">
-                                <td class="py-3 px-2 max-w-[200px] truncate" title="${f.originalName}">${f.originalName}</td>
-                                <td class="py-3 px-2">${f.username || 'Anónimo'}</td>
+                                <td class="py-3 px-2 max-w-[200px] truncate" title="${escapeHtml(f.originalName)}">${escapeHtml(f.originalName)}</td>
+                                <td class="py-3 px-2">${escapeHtml(f.username) || 'Anónimo'}</td>
                                 <td class="py-3 px-2">${formatBytes(f.size)}</td>
                                 <td class="py-3 px-2">${f.downloadCount}</td>
                                 <td class="py-3 px-2">${new Date(f.createdAt).toLocaleDateString()}</td>
                                 <td class="py-3 px-2">
-                                    <button class="text-red-400 hover:text-red-300 delete-file-btn" data-id="${f.id}">
+                                    <button class="text-red-400 hover:text-red-300 delete-file-btn" data-id="${escapeHtml(f.id)}">
                                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                                     </button>
                                 </td>
@@ -2800,13 +2877,13 @@
                             row.innerHTML = `
                                 <td class="py-3 px-2 dark:text-gray-300 light:text-gray-700">${new Date(report.createdAt).toLocaleDateString()}</td>
                                 <td class="py-3 px-2 dark:text-gray-300 light:text-gray-700">
-                                    <a href="/share/${report.fileId}" target="_blank" class="text-blue-400 hover:underline truncate block max-w-[150px]">
-                                        ${report.originalName || 'Archivo eliminado'}
+                                    <a href="/share/${escapeHtml(report.fileId)}" target="_blank" class="text-blue-400 hover:underline truncate block max-w-[150px]">
+                                        ${escapeHtml(report.originalName) || 'Archivo eliminado'}
                                     </a>
                                 </td>
-                                <td class="py-3 px-2 dark:text-gray-300 light:text-gray-700 max-w-[200px] truncate" title="${report.reason}">${report.reason}</td>
+                                <td class="py-3 px-2 dark:text-gray-300 light:text-gray-700 max-w-[200px] truncate" title="${escapeHtml(report.reason)}">${escapeHtml(report.reason)}</td>
                                 <td class="py-3 px-2 font-medium ${statusColors[report.status] || 'text-gray-500'}">
-                                    ${statusLabels[report.status] || report.status}
+                                    ${statusLabels[report.status] || escapeHtml(report.status)}
                                 </td>
                                 <td class="py-3 px-2">
                                     <div class="flex gap-2">
@@ -3181,7 +3258,7 @@
                                     <i data-lucide="file" class="w-6 h-6 text-blue-400"></i>
                                 </div>
                                 <div class="min-w-0">
-                                    <p class="font-medium truncate dark:text-white light:text-gray-800" title="${file.originalName}">${file.originalName}</p>
+                                    <p class="font-medium truncate dark:text-white light:text-gray-800" title="${escapeHtml(file.originalName)}">${escapeHtml(file.originalName)}</p>
                                     <p class="text-xs text-gray-400">${formatBytes(file.size)} • ${new Date(file.createdAt).toLocaleDateString()}</p>
                                 </div>
                             </div>
@@ -3191,10 +3268,10 @@
                                     ${file.expiresAt ? `<p class="text-xs text-yellow-500">Expira: ${new Date(file.expiresAt).toLocaleDateString()}</p>` : ''}
                                 </div>
                                 <div class="flex gap-2">
-                                    <button class="p-2 hover:bg-white/10 rounded-lg text-blue-400 copy-link-btn" data-id="${file.id}" title="Copiar enlace">
+                                    <button class="p-2 hover:bg-white/10 rounded-lg text-blue-400 copy-link-btn" data-id="${escapeHtml(file.id)}" title="Copiar enlace">
                                         <i data-lucide="copy" class="w-5 h-5"></i>
                                     </button>
-                                    <button class="p-2 hover:bg-red-500/20 rounded-lg text-red-400 delete-file-btn" data-id="${file.id}" title="Eliminar">
+                                    <button class="p-2 hover:bg-red-500/20 rounded-lg text-red-400 delete-file-btn" data-id="${escapeHtml(file.id)}" title="Eliminar">
                                         <i data-lucide="trash-2" class="w-5 h-5"></i>
                                     </button>
                                 </div>
@@ -3469,6 +3546,14 @@
                     document.body.addEventListener(eventName, preventDefaults, false);
                 });
 
+                // Keyboard navigation for dropzone
+                dropZone.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        fileInput.click();
+                    }
+                });
+
                 // Resaltar al arrastrar
                 ['dragenter', 'dragover'].forEach(eventName => {
                     dropZone.addEventListener(eventName, () => dropOverlay.style.opacity = '1', false);
@@ -3478,56 +3563,69 @@
                     dropZone.addEventListener(eventName, () => dropOverlay.style.opacity = '0', false);
                 });
 
-                // Manejar archivos soltados
+                // Manejar archivos soltados (múltiples)
                 dropZone.addEventListener('drop', (e) => {
                     const dt = e.dataTransfer;
                     const files = dt.files;
                     if (files.length) {
-                        fileInput.files = files; // Asignar al input
-                        showUploadOptions(files[0]);
+                        fileInput.files = files;
+                        showUploadOptions(Array.from(files));
                     }
                 }, false);
 
-                // Manejar selección de input
+                // Manejar selección de input (múltiples)
                 fileInput.addEventListener('change', () => {
                     if (fileInput.files.length > 0) {
-                        showUploadOptions(fileInput.files[0]);
+                        showUploadOptions(Array.from(fileInput.files));
                     }
                 });
 
-                // Mostrar opciones cuando se selecciona un archivo
-                function showUploadOptions(file) {
-                    selectedFile = file;
+                // Variables para multi-file
+                let selectedFiles = [];
+                const filesCountBadge = document.getElementById('files-count-badge');
+                const uploadBtnText = document.getElementById('upload-btn-text');
+
+                // Mostrar opciones cuando se seleccionan archivos (soporta múltiples)
+                function showUploadOptions(files) {
+                    selectedFiles = Array.isArray(files) ? files : [files];
+                    selectedFile = selectedFiles[0]; // Mantener compatibilidad
                     hideSuccessBanner();
                     
-                    // Actualizar la zona de drop para mostrar el archivo seleccionado
-                    const dropIcon = dropZone.querySelector('[data-lucide="upload-cloud"], [data-lucide="file-check"]');
+                    const dropIcon = dropZone.querySelector('[data-lucide="upload-cloud"], [data-lucide="file-check"], [data-lucide="files"]');
                     const mainText = dropZone.querySelector('#drop-main-text');
                     const subText = dropZone.querySelector('#drop-sub-text');
                     
-                    if (dropIcon) {
-                        dropIcon.setAttribute('data-lucide', 'file-check');
+                    if (selectedFiles.length === 1) {
+                        if (dropIcon) dropIcon.setAttribute('data-lucide', 'file-check');
+                        mainText.textContent = `Archivo seleccionado: ${selectedFiles[0].name}`;
+                        subText.textContent = `${formatBytes(selectedFiles[0].size)} • Haz clic para cambiar`;
+                        if (filesCountBadge) filesCountBadge.classList.add('hidden');
+                        if (uploadBtnText) uploadBtnText.textContent = 'Subir archivo';
+                    } else {
+                        if (dropIcon) dropIcon.setAttribute('data-lucide', 'files');
+                        const totalSize = selectedFiles.reduce((acc, f) => acc + f.size, 0);
+                        mainText.textContent = `${selectedFiles.length} archivos seleccionados`;
+                        subText.textContent = `${formatBytes(totalSize)} en total • Haz clic para cambiar`;
+                        if (filesCountBadge) {
+                            filesCountBadge.textContent = selectedFiles.length;
+                            filesCountBadge.classList.remove('hidden');
+                        }
+                        if (uploadBtnText) uploadBtnText.textContent = `Subir ${selectedFiles.length} archivos`;
                     }
-                    mainText.textContent = `Archivo seleccionado: ${file.name}`;
-                    subText.textContent = `${formatBytes(file.size)} • Haz clic para cambiar`;
                     
-                    // Mostrar las opciones
                     uploadOptions.classList.remove('hidden');
                     if (clearSelectionBtn) {
                         clearSelectionBtn.disabled = false;
                         clearSelectionBtn.classList.remove("opacity-50", "pointer-events-none");
                     }
                     
-                    // Refrescar iconos
                     lucide.createIcons();
-                    
-                    // Scroll suave hacia las opciones
                     uploadOptions.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
 
-                // Botón de iniciar subida
+                // Botón de iniciar subida (múltiples archivos)
                 startUploadBtn.addEventListener('click', async () => {
-                    if (!selectedFile) return;
+                    if (selectedFiles.length === 0) return;
 
                     const originalBtnContent = startUploadBtn.innerHTML;
                     const mainText = dropZone.querySelector('#drop-main-text');
@@ -3535,47 +3633,55 @@
                     uploadOptions.classList.add('hidden');
                     dropZone.classList.add('opacity-60', 'pointer-events-none');
                     startUploadBtn.disabled = true;
-                    startUploadBtn.innerHTML = '<i data-lucide="loader-2" class="icon animate-spin"></i> Subiendo...';
+                    
+                    const fileCount = selectedFiles.length;
+                    startUploadBtn.innerHTML = `<i data-lucide="loader-2" class="icon animate-spin" aria-hidden="true"></i> Subiendo ${fileCount > 1 ? fileCount + ' archivos' : ''}...`;
                     if (mainText && subText) {
-                        mainText.textContent = `Subiendo: ${selectedFile.name}`;
+                        mainText.textContent = fileCount > 1 ? `Subiendo ${fileCount} archivos...` : `Subiendo: ${selectedFiles[0].name}`;
                         subText.textContent = 'No cierres esta pestaña hasta finalizar.';
                     }
                     lucide.createIcons();
 
-                    const currentFileName = selectedFile ? selectedFile.name : '';
                     let uploadSuccess = false;
-                    let lastUploadResult = null;
+                    let uploadResults = [];
 
                     try {
-                        const results = await handleFiles([selectedFile]);
-                        if (Array.isArray(results) && results.length > 0) {
-                            lastUploadResult = results[0];
-                        }
-                        uploadSuccess = true;
+                        // Subir todos los archivos seleccionados
+                        uploadResults = await handleFiles(selectedFiles);
+                        uploadSuccess = uploadResults.some(r => r && r.downloadUrl);
                     } catch (err) {
                         console.error('Error global en subida:', err);
                     } finally {
-                        if (uploadSuccess && lastUploadResult && lastUploadResult.downloadUrl) {
-                            showNotification('Archivo listo! Encuentra el enlace generado debajo.', 'success', 4000);
+                        const successCount = uploadResults.filter(r => r && r.downloadUrl).length;
+                        if (uploadSuccess) {
+                            if (fileCount > 1) {
+                                showNotification(`${successCount} de ${fileCount} archivos subidos correctamente!`, 'success', 4000);
+                            } else {
+                                showNotification('Archivo listo! Encuentra el enlace generado debajo.', 'success', 4000);
+                            }
                         }
                         startUploadBtn.disabled = false;
                         startUploadBtn.innerHTML = originalBtnContent;
-                        resetDropZone(uploadSuccess ? { state: 'success', fileName: currentFileName, downloadUrl: lastUploadResult?.downloadUrl } : { state: 'default' });
+                        const lastSuccess = uploadResults.find(r => r && r.downloadUrl);
+                        resetDropZone(uploadSuccess ? { state: 'success', fileCount: successCount, downloadUrl: lastSuccess?.downloadUrl } : { state: 'default' });
                     }
                 });
 
                 // Función para resetear la zona de drop
-
 function resetDropZone(options = {}) {
-    const { state = 'default', fileName, downloadUrl } = options;
-    const dropIcon = dropZone.querySelector('[data-lucide="file-check"], [data-lucide="upload-cloud"]');
+    const { state = 'default', fileCount = 1, downloadUrl } = options;
+    const dropIcon = dropZone.querySelector('[data-lucide="file-check"], [data-lucide="files"], [data-lucide="upload-cloud"]');
     const mainText = dropZone.querySelector('#drop-main-text');
     const subText = dropZone.querySelector('#drop-sub-text');
 
     dropZone.classList.remove('opacity-60', 'pointer-events-none');
     uploadOptions.classList.add('hidden');
     selectedFile = null;
+    selectedFiles = [];
     fileInput.value = '';
+    
+    if (filesCountBadge) filesCountBadge.classList.add('hidden');
+    if (uploadBtnText) uploadBtnText.textContent = 'Subir archivos';
 
     if (dropIcon) {
         dropIcon.setAttribute('data-lucide', 'upload-cloud');
@@ -3583,12 +3689,12 @@ function resetDropZone(options = {}) {
 
     if (state === 'success') {
         if (mainText) {
-            mainText.textContent = 'Archivo subido correctamente';
+            mainText.textContent = fileCount > 1 ? `${fileCount} archivos subidos correctamente` : 'Archivo subido correctamente';
         }
         if (subText) {
             subText.textContent = downloadUrl
-                ? 'Comparte el enlace generado a continuación.'
-                : 'Copia el enlace generado abajo o selecciona un nuevo archivo.';
+                ? 'Comparte los enlaces generados a continuación.'
+                : 'Copia los enlaces generados abajo o selecciona nuevos archivos.';
         }
         if (successBanner && successUrlInput && downloadUrl) {
             successBanner.classList.remove('hidden');
@@ -3599,10 +3705,10 @@ function resetDropZone(options = {}) {
         }
     } else {
         if (mainText) {
-            mainText.textContent = 'Arrastra tu archivo aquí';
+            mainText.textContent = 'Arrastra tus archivos aquí';
         }
         if (subText) {
-            subText.textContent = 'o haz clic para seleccionar';
+            subText.textContent = 'o haz clic para seleccionar (múltiples archivos permitidos)';
         }
         hideSuccessBanner();
     }
@@ -3636,8 +3742,12 @@ function resetDropZone(options = {}) {
                 const resultInput = item.querySelector('.result-link input');
                 const copyButton = item.querySelector('.copy-button');
                 const errorEl = item.querySelector('.error-message');
+                const progressDetailEl = item.querySelector('.progress-detail');
+                const speedTextEl = item.querySelector('.speed-text');
+                const bytesUploadedEl = item.querySelector('.bytes-uploaded');
+                const etaTextEl = item.querySelector('.eta-text');
 
-                fileNameEl.textContent = file.name;
+                fileNameEl.textContent = escapeHtml(file.name);
                 uploadList.prepend(item);
                 
                 // Scroll hacia el elemento de progreso
@@ -3669,11 +3779,73 @@ function resetDropZone(options = {}) {
 
                 const expiresHours = (expiresDays !== null && expiresDays > 0) ? expiresDays * 24 : null;
 
+                // Variables para calcular velocidad y ETA
+                let uploadStartTime = null;
+                let lastProgressUpdate = null;
+                let lastUploadedBytes = 0;
+                let speedSamples = [];
+                const MAX_SPEED_SAMPLES = 5;
+
+                const formatSpeed = (bytesPerSecond) => {
+                    if (bytesPerSecond < 1024) return `${Math.round(bytesPerSecond)} B/s`;
+                    if (bytesPerSecond < 1024 * 1024) return `${(bytesPerSecond / 1024).toFixed(1)} KB/s`;
+                    return `${(bytesPerSecond / (1024 * 1024)).toFixed(2)} MB/s`;
+                };
+
+                const formatETA = (seconds) => {
+                    if (!seconds || seconds <= 0 || !isFinite(seconds)) return '';
+                    if (seconds < 60) return `~${Math.round(seconds)}s restantes`;
+                    if (seconds < 3600) return `~${Math.round(seconds / 60)}min restantes`;
+                    return `~${(seconds / 3600).toFixed(1)}h restantes`;
+                };
+
+                const updateProgressUI = (uploadedBytes, totalBytes, completedChunks, totalChunks) => {
+                    const now = Date.now();
+                    const percent = (uploadedBytes / totalBytes) * 100;
+                    
+                    // Actualizar barra de progreso
+                    progressEl.value = percent;
+                    item.setAttribute('aria-valuenow', Math.round(percent));
+                    
+                    // Calcular velocidad
+                    if (lastProgressUpdate && uploadedBytes > lastUploadedBytes) {
+                        const timeDiff = (now - lastProgressUpdate) / 1000;
+                        const bytesDiff = uploadedBytes - lastUploadedBytes;
+                        const currentSpeed = bytesDiff / timeDiff;
+                        
+                        speedSamples.push(currentSpeed);
+                        if (speedSamples.length > MAX_SPEED_SAMPLES) {
+                            speedSamples.shift();
+                        }
+                    }
+                    
+                    lastProgressUpdate = now;
+                    lastUploadedBytes = uploadedBytes;
+                    
+                    // Calcular velocidad promedio
+                    const avgSpeed = speedSamples.length > 0 
+                        ? speedSamples.reduce((a, b) => a + b, 0) / speedSamples.length 
+                        : 0;
+                    
+                    // Calcular ETA
+                    const remainingBytes = totalBytes - uploadedBytes;
+                    const etaSeconds = avgSpeed > 0 ? remainingBytes / avgSpeed : 0;
+                    
+                    // Actualizar UI
+                    statusTextEl.textContent = `${Math.round(percent)}%`;
+                    if (progressDetailEl) progressDetailEl.textContent = `Chunk ${completedChunks}/${totalChunks}`;
+                    if (speedTextEl) speedTextEl.textContent = avgSpeed > 0 ? formatSpeed(avgSpeed) : '';
+                    if (bytesUploadedEl) bytesUploadedEl.textContent = `${formatBytes(uploadedBytes)} / ${formatBytes(totalBytes)}`;
+                    if (etaTextEl) etaTextEl.textContent = formatETA(etaSeconds);
+                };
+
                 try {
                     console.log('🚀 Iniciando subida de archivo:', file.name, 'Tamaño:', file.size);
                     statusTextEl.textContent = 'Inicializando... 0%';
+                    if (progressDetailEl) progressDetailEl.textContent = 'Conectando con el servidor...';
                     progressEl.value = 0;
                     progressEl.classList.remove('hidden');
+                    
                     // 1) init
                     const initRes = await fetch('/api/upload/init', {
                         method: 'POST',
@@ -3692,11 +3864,16 @@ function resetDropZone(options = {}) {
                     if (!initRes.ok) throw new Error(initJson.message || 'No se pudo iniciar la subida.');
 
                     const uploadId = initJson.uploadId;
-                    const CHUNK_SIZE = initJson.chunkSize || (10 * 1024 * 1024); // Use server chunk size or default 10MB
+                    const CHUNK_SIZE = initJson.chunkSize || (10 * 1024 * 1024);
                     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
                     let uploadedBytes = 0;
                     let completedChunks = 0;
+                    
+                    uploadStartTime = Date.now();
+                    lastProgressUpdate = uploadStartTime;
+                    
                     console.log(`📦 Total chunks: ${totalChunks}, Chunk size: ${CHUNK_SIZE / 1024 / 1024}MB`);
+                    if (progressDetailEl) progressDetailEl.textContent = `Preparando ${totalChunks} chunks...`;
 
                     // 2) subir chunks en paralelo
                     const uploadChunk = async (i) => {
@@ -3715,10 +3892,8 @@ function resetDropZone(options = {}) {
                         }
                         uploadedBytes += (end - start);
                         completedChunks += 1;
-                        const percent = (uploadedBytes / file.size) * 100;
-                        progressEl.value = percent;
-                        statusTextEl.textContent = `${Math.round(percent)}% • Chunk ${completedChunks}/${totalChunks}`;
-                        console.log(`✅ Chunk ${i + 1} completado. Progreso: ${Math.round(percent)}%`);
+                        updateProgressUI(uploadedBytes, file.size, completedChunks, totalChunks);
+                        console.log(`✅ Chunk ${i + 1} completado. Progreso: ${Math.round((uploadedBytes / file.size) * 100)}%`);
                     };
 
                     let cursor = 0;
@@ -3733,6 +3908,10 @@ function resetDropZone(options = {}) {
                     console.log('✨ Todos los chunks subidos, finalizando...');
                     // 3) complete
                     statusTextEl.textContent = 'Finalizando...';
+                    if (progressDetailEl) progressDetailEl.textContent = 'Ensamblando archivo...';
+                    if (speedTextEl) speedTextEl.textContent = '';
+                    if (etaTextEl) etaTextEl.textContent = '';
+                    
                     const compRes = await fetch('/api/upload/complete', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -3742,8 +3921,20 @@ function resetDropZone(options = {}) {
                     console.log('🎉 Upload completado:', compJson);
                     if (!compRes.ok) throw new Error(compJson.message || 'No se pudo finalizar la subida.');
 
-                    statusTextEl.textContent = '100% - Completado!';
+                    // Calcular tiempo total de subida
+                    const totalTime = (Date.now() - uploadStartTime) / 1000;
+                    const avgTotalSpeed = file.size / totalTime;
+                    
+                    statusTextEl.textContent = '✓ Completado';
                     statusTextEl.classList.add('text-green-400');
+                    if (progressDetailEl) progressDetailEl.textContent = `Subido en ${totalTime < 60 ? Math.round(totalTime) + 's' : Math.round(totalTime / 60) + 'min'}`;
+                    if (speedTextEl) speedTextEl.textContent = `Promedio: ${formatSpeed(avgTotalSpeed)}`;
+                    if (bytesUploadedEl) bytesUploadedEl.textContent = formatBytes(file.size);
+                    if (etaTextEl) etaTextEl.textContent = '';
+                    
+                    item.setAttribute('aria-valuenow', '100');
+                    progressEl.value = 100;
+                    
                     resultLinkEl.classList.remove('hidden');
                     resultInput.value = compJson.downloadUrl;
                     resultInput.setAttribute('value', compJson.downloadUrl);
@@ -4000,6 +4191,13 @@ function resetDropZone(options = {}) {
                 }
             }
             
+            // Función para escapar HTML y prevenir XSS
+            function escapeHtml(text) {
+                if (text === null || text === undefined) return '';
+                const div = document.createElement('div');
+                div.textContent = String(text);
+                return div.innerHTML;
+            }
             
             function formatBytes(bytes, decimals = 2) {
                 if (bytes === 0) return '0 Bytes';
@@ -4045,6 +4243,70 @@ function resetDropZone(options = {}) {
             checkAuthStatus().then(() => {
                 renderRoute(window.location.pathname);
             });
+        });
+    </script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        // Register Service Worker for offline support
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('[App] Service Worker registered:', registration.scope);
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New content available, show update notification
+                                    if (confirm('Nueva versión disponible. ¿Actualizar ahora?')) {
+                                        newWorker.postMessage({ action: 'skipWaiting' });
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch((error) => {
+                        console.warn('[App] Service Worker registration failed:', error);
+                    });
+                
+                // Handle controller change (new SW activated)
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    console.log('[App] New Service Worker active');
+                });
+            });
+        }
+        
+        // Offline/Online status indicator
+        window.addEventListener('online', () => {
+            document.body.classList.remove('offline-mode');
+            const notification = document.getElementById('global-notification');
+            const content = document.getElementById('global-notification-content');
+            if (notification && content) {
+                content.textContent = 'Conexión restaurada';
+                content.className = 'max-w-lg w-full px-4 py-3 rounded-lg shadow-lg text-sm font-medium text-white text-center bg-green-600/90';
+                notification.classList.remove('hidden');
+                notification.classList.add('flex');
+                setTimeout(() => {
+                    notification.classList.add('hidden');
+                    notification.classList.remove('flex');
+                }, 3000);
+            }
+        });
+        
+        window.addEventListener('offline', () => {
+            document.body.classList.add('offline-mode');
+            const notification = document.getElementById('global-notification');
+            const content = document.getElementById('global-notification-content');
+            if (notification && content) {
+                content.textContent = 'Sin conexión - Algunas funciones no estarán disponibles';
+                content.className = 'max-w-lg w-full px-4 py-3 rounded-lg shadow-lg text-sm font-medium text-white text-center bg-yellow-600/90';
+                notification.classList.remove('hidden');
+                notification.classList.add('flex');
+            }
         });
     </script>
 </body>

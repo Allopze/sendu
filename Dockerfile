@@ -3,9 +3,17 @@ FROM node:18-alpine
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install --production
+
+# Instalar TODAS las dependencias (incluyendo devDependencies para build)
+RUN npm install
 
 COPY . .
+
+# Compilar Tailwind CSS para producción
+RUN npm run build:css
+
+# Eliminar devDependencies después del build para imagen más ligera
+RUN npm prune --production
 
 # Crear directorios necesarios
 RUN mkdir -p uploads/chunks

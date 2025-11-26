@@ -1,0 +1,56 @@
+# ===========================================
+# SENDU - .gitignore
+# ===========================================
+
+# --- Dependencias ---
+node_modules/
+
+# --- Variables de entorno (CONTIENEN SECRETOS) ---
+.env
+.env.local
+.env.production
+.env.*.local
+
+# --- Base de datos SQLite ---
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+db.sqlite
+sessions.sqlite
+
+# --- Archivos subidos por usuarios ---
+uploads/
+!uploads/.gitkeep
+
+# --- Logs ---
+logs/
+*.log
+npm-debug.log*
+
+# --- Build/Dist ---
+dist/
+build/
+frontend/dist/
+
+# --- Sistema operativo ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# --- IDEs y editores ---
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# --- Testing ---
+coverage/
+.nyc_output/
+
+# --- Temporales ---
+tmp/
+temp/
+*.tmp
+*.temp

@@ -11,15 +11,21 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - STORAGE_PATH=/app/uploads
-      - SESSION_SECRET=change_this_secret_in_production
-      - PASSWORD_SECRET=change_this_secret_in_production
-      # SMTP Configuration (Optional)
-      # - SMTP_HOST=smtp.example.com
-      # - SMTP_PORT=587
-      # - SMTP_USER=user
-      # - SMTP_PASS=password
-      # - SMTP_SECURE=false
-      # - SMTP_FROM="Sendu" <noreply@example.com>
+      - PUBLIC_ORIGIN=https://sendu.lat
+      - LOCAL_ORIGIN=http://localhost:3000
+      # ⚠️ IMPORTANTE: Configura estos secretos como variables de entorno del sistema
+      # o usa un archivo .env externo. NUNCA commitees secretos reales.
+      - SESSION_SECRET=${SESSION_SECRET}
+      - PASSWORD_SECRET=${PASSWORD_SECRET}
+      - SESSION_COOKIE_SECURE=true
+      - SESSION_COOKIE_SAMESITE=lax
+      # SMTP Configuration (Brevo)
+      - SMTP_HOST=${SMTP_HOST:-smtp-relay.brevo.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_SECURE=false
+      - SMTP_FROM=${SMTP_FROM:-"Sendu <no-reply@sendu.lat>"}
     volumes:
       - ./uploads:/app/uploads
       - ./db.sqlite:/app/db.sqlite

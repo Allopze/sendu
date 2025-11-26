@@ -1,0 +1,57 @@
+{
+  "name": "Sendu - Compartir Archivos",
+  "short_name": "Sendu",
+  "description": "Comparte archivos de forma segura y rápida. Subida de archivos hasta 10GB con cifrado y enlaces temporales.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#dc2626",
+  "orientation": "any",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/assets/icons/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["utilities", "productivity"],
+  "lang": "es",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Subir archivo",
+      "short_name": "Subir",
+      "description": "Sube un nuevo archivo",
+      "url": "/upload",
+      "icons": [{ "src": "/assets/icons/favicon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Ver tus archivos",
+      "url": "/dashboard",
+      "icons": [{ "src": "/assets/icons/favicon.svg", "sizes": "96x96" }]
+    }
+  ],
+  "screenshots": [],
+  "related_applications": [],
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  }
+}

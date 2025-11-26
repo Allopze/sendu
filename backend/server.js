@@ -1298,7 +1298,7 @@ app.post('/api/upload/init', async (req, res) => {
   }
 });
 
-// POST /api/upload/chunk?uploadId=...&index=...&total=...
+// POST /api/upload/chunk?uploadId=...&index=...
 // Body: binario (application/octet-stream) del chunk
 app.post('/api/upload/chunk', (req, res) => {
   try {
@@ -1307,10 +1307,22 @@ app.post('/api/upload/chunk', (req, res) => {
       return res.status(400).json({ message: 'uploadId e index son obligatorios.' });
     }
     const idx = parseInt(index);
+    
+    // Validar que idx sea un número válido
+    if (isNaN(idx) || idx < 0) {
+      return res.status(400).json({ message: 'Index debe ser un número entero positivo.' });
+    }
+    
     const dir = path.join(CHUNKS_PATH, uploadId);
     const metaPath = path.join(dir, 'meta.json');
     if (!fs.existsSync(dir) || !fs.existsSync(metaPath)) {
       return res.status(404).json({ message: 'Subida no encontrada.' });
+    }
+
+    // Validar que el índice esté dentro del rango esperado
+    const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+    if (idx >= meta.totalChunks) {
+      return res.status(400).json({ message: `Index ${idx} excede el total de chunks (${meta.totalChunks}).` });
     }
 
     const partPath = path.join(dir, `${idx}.part`);
@@ -1321,6 +1333,10 @@ app.post('/api/upload/chunk', (req, res) => {
     });
     writeStream.on('error', (err) => {
       console.error('Error escribiendo chunk:', err);
+      // Limpiar archivo parcial si hubo error
+      if (fs.existsSync(partPath)) {
+        try { fs.unlinkSync(partPath); } catch (e) { /* ignorar */ }
+      }
       res.status(500).json({ message: 'Error al guardar el chunk.' });
     });
   } catch (err) {
@@ -1377,16 +1393,26 @@ app.post('/api/upload/complete', detectOrigin, async (req, res) => {
     
     const writeStream = fs.createWriteStream(finalPath);
     
-    for (let i = 0; i < meta.totalChunks; i++) {
-      const partPath = path.join(dir, `${i}.part`);
-      await new Promise((resolve, reject) => {
-        const readStream = fs.createReadStream(partPath);
-        readStream.pipe(writeStream, { end: false });
-        readStream.on('end', resolve);
-        readStream.on('error', reject);
-      });
-    }
-    writeStream.end();
+    // Wrap en una promesa para manejar errores del writeStream
+    await new Promise(async (resolveAll, rejectAll) => {
+      writeStream.on('error', rejectAll);
+      
+      try {
+        for (let i = 0; i < meta.totalChunks; i++) {
+          const partPath = path.join(dir, `${i}.part`);
+          await new Promise((resolve, reject) => {
+            const readStream = fs.createReadStream(partPath);
+            readStream.pipe(writeStream, { end: false });
+            readStream.on('end', resolve);
+            readStream.on('error', reject);
+          });
+        }
+        
+        writeStream.end(() => resolveAll());
+      } catch (err) {
+        rejectAll(err);
+      }
+    });
 
     const fileSize = (await fsp.stat(finalPath)).size;
     const expiresAt = meta.expiresHours ? (Date.now() + (meta.expiresHours * 60 * 60 * 1000)) : null;
@@ -1596,25 +1622,40 @@ app.delete('/api/files/:id', (req, res) => {
   }
 });
 
+// Rate limiter para reportes (evitar spam)
+const reportLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 5, // máximo 5 reportes por hora por IP
+  message: { message: 'Demasiados reportes. Intenta de nuevo más tarde.' }
+});
+
 // POST /api/report/:fileId - Reportar un archivo
-app.post('/api/report/:fileId', (req, res) => {
+app.post('/api/report/:fileId', reportLimiter, (req, res) => {
   try {
     const { reason } = req.body;
-    const fileId = req.params.id; // Corregido: req.params.fileId no existe en la ruta definida como :fileId.
-    // Express mapea :fileId a req.params.fileId.
-    // Corrección: usar req.params.fileId
+    const fileId = req.params.fileId;
     
-    if (!reason) {
-      return res.status(400).json({ message: 'El motivo es obligatorio.' });
+    if (!reason || typeof reason !== 'string' || reason.trim().length < 10) {
+      return res.status(400).json({ message: 'El motivo es obligatorio y debe tener al menos 10 caracteres.' });
     }
 
-    const file = db.prepare('SELECT id FROM files WHERE id = ?').get(req.params.fileId);
+    if (reason.length > 1000) {
+      return res.status(400).json({ message: 'El motivo no puede exceder 1000 caracteres.' });
+    }
+
+    const file = db.prepare('SELECT id FROM files WHERE id = ?').get(fileId);
     if (!file) {
       return res.status(404).json({ message: 'Archivo no encontrado.' });
     }
 
+    // Verificar si ya existe un reporte pendiente del mismo archivo desde esta IP
+    const existingReport = db.prepare('SELECT id FROM reports WHERE fileId = ? AND status = ?').get(fileId, 'pending');
+    if (existingReport) {
+      return res.status(409).json({ message: 'Ya existe un reporte pendiente para este archivo.' });
+    }
+
     const reportId = uuidv4();
-    db.prepare('INSERT INTO reports (id, fileId, reason, createdAt) VALUES (?, ?, ?, ?)').run(reportId, req.params.fileId, reason, Date.now());
+    db.prepare('INSERT INTO reports (id, fileId, reason, createdAt) VALUES (?, ?, ?, ?)').run(reportId, fileId, reason.trim(), Date.now());
 
     res.json({ message: 'Reporte enviado correctamente.' });
   } catch (err) {
@@ -1732,6 +1773,20 @@ app.get('/share/:id', (req, res) => {
   // Esta ruta podría servir una página HTML específica (como index.html)
   // que luego use JS para llamar a /api/meta/:id
   res.sendFile(path.join(FRONTEND_PATH, 'index.html'));
+});
+
+// Servir Service Worker con headers correctos para PWA
+app.get('/sw.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.setHeader('Service-Worker-Allowed', '/');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(FRONTEND_PATH, 'sw.js'));
+});
+
+// Servir manifest.json para PWA
+app.get('/manifest.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/manifest+json');
+  res.sendFile(path.join(FRONTEND_PATH, 'manifest.json'));
 });
 
 // Servir la aplicación de frontend principal
