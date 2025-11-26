@@ -161,7 +161,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'"],
+      connectSrc: ["'self'", "https://unpkg.com", "https://cdn.jsdelivr.net"],
       objectSrc: ["'none'"],
       // Solo forzar HTTPS en producción con cookie segura
       upgradeInsecureRequests: sessionCookieSecure ? [] : null,
@@ -373,9 +373,10 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
     // Enviar email de verificación
     const verifyLink = `${req.protocol}://${req.get('host')}/verify-email?token=${verificationToken}`;
     
-    if (!process.env.SMTP_HOST) {
-       console.log(`[DEV] Verify Link para ${email}: ${verifyLink}`);
-    } else {
+    // SIEMPRE loguear el link en consola para depuración/emergencia
+    console.log(`[AUTH] Verify Link para ${email}: ${verifyLink}`);
+
+    if (process.env.SMTP_HOST) {
        // Enviar email asíncronamente
        transporter.sendMail({
         from: process.env.SMTP_FROM || '"Sendu" <noreply@sendu.local>',
@@ -384,7 +385,7 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
         html: `<p>Hola ${username},</p>
                <p>Gracias por registrarte. Por favor verifica tu email haciendo clic en el siguiente enlace:</p>
                <a href="${verifyLink}">${verifyLink}</a>`
-      }).catch(console.error);
+      }).catch(err => console.error('[SMTP ERROR] Falló envío de verificación:', err));
     }
 
     res.status(201).json({
@@ -485,21 +486,28 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
 
     const resetLink = `${req.protocol}://${req.get('host')}/reset-password?token=${token}`;
 
+    // SIEMPRE loguear el link en consola para depuración/emergencia
+    console.log(`[AUTH] Reset Link para ${email}: ${resetLink}`);
+
     if (!process.env.SMTP_HOST) {
-      console.log(`[DEV] Reset Link para ${email}: ${resetLink}`);
       return res.json({ message: 'Si el email existe, se enviará un enlace de recuperación. (Revisa la consola del servidor en modo DEV)' });
     }
 
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || '"Sendu" <noreply@sendu.local>',
-      to: email,
-      subject: 'Recuperación de contraseña - Sendu',
-      html: `<p>Hola ${user.username},</p>
-             <p>Has solicitado restablecer tu contraseña.</p>
-             <p>Haz clic en el siguiente enlace para continuar:</p>
-             <a href="${resetLink}">${resetLink}</a>
-             <p>Este enlace expira en 1 hora.</p>`
-    });
+    try {
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || '"Sendu" <noreply@sendu.local>',
+        to: email,
+        subject: 'Recuperación de contraseña - Sendu',
+        html: `<p>Hola ${user.username},</p>
+               <p>Has solicitado restablecer tu contraseña.</p>
+               <p>Haz clic en el siguiente enlace para continuar:</p>
+               <a href="${resetLink}">${resetLink}</a>
+               <p>Este enlace expira en 1 hora.</p>`
+      });
+    } catch (smtpError) {
+      console.error('[SMTP ERROR] Falló envío de recuperación:', smtpError);
+      // No devolvemos error al usuario por seguridad (user enumeration), pero logueamos el error
+    }
 
     res.json({ message: 'Si el email existe, se enviará un enlace de recuperación.' });
 
