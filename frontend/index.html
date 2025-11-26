@@ -1241,6 +1241,35 @@
         </div>
     </template>
 
+    <!-- Template para verificación de email -->
+    <template id="verify-email-view-template">
+        <div class="w-full max-w-md glass-container p-8 animate-in slide-in-from-top-4 duration-500 text-center">
+            <div id="verify-loading">
+                <i data-lucide="loader-2" class="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4"></i>
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">Verificando tu cuenta...</h2>
+                <p class="text-gray-600 dark:text-gray-300">Por favor espera un momento.</p>
+            </div>
+            
+            <div id="verify-success" class="hidden">
+                <i data-lucide="check-circle" class="w-16 h-16 text-green-500 mx-auto mb-4"></i>
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">¡Cuenta Verificada!</h2>
+                <p class="text-gray-600 dark:text-gray-300 mb-6">Tu correo ha sido confirmado correctamente.</p>
+                <button onclick="navigateTo('/login')" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors">
+                    Iniciar Sesión
+                </button>
+            </div>
+
+            <div id="verify-error" class="hidden">
+                <i data-lucide="x-circle" class="w-16 h-16 text-red-500 mx-auto mb-4"></i>
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">Error de Verificación</h2>
+                <p id="verify-error-msg" class="text-gray-600 dark:text-gray-300 mb-6">El enlace es inválido o ha expirado.</p>
+                <button onclick="navigateTo('/login')" class="btn-outline w-full justify-center">
+                    Volver al inicio
+                </button>
+            </div>
+        </div>
+    </template>
+
     <!-- Template para dashboard del usuario -->
     <template id="dashboard-view-template">
         <div class="w-full max-w-6xl glass-container p-8 animate-in slide-in-from-top-4 duration-500 space-y-8">
@@ -1553,18 +1582,14 @@
         <div class="glass-container p-6 space-y-4">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <h3 class="text-lg font-semibold dark:text-white light:text-gray-800 flex items-center gap-2">
-                    <i data-lucide="folder" style="width: 20px; height: 20px;"></i>
+                    <i data-lucide="file" style="width: 20px; height: 20px;"></i>
                     Gestión de Archivos
                 </h3>
-                <div class="flex gap-2">
-                    <input 
-                        type="text" 
-                        id="search-files-input" 
-                        placeholder="Buscar archivos..."
-                        class="px-4 py-2 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800 text-sm"
-                    >
+                <div class="flex items-center gap-2">
+                    <input type="text" id="search-files-input" placeholder="Buscar archivos..." class="px-3 py-2 rounded-lg bg-white/10 dark:bg-slate-800/50 light:bg-white border border-gray-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:text-white light:text-gray-800 text-sm">
                     <button id="refresh-files-btn" class="btn-outline">
                         <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i>
+                        Actualizar
                     </button>
                 </div>
             </div>
@@ -1853,8 +1878,31 @@
             };
             let notificationTimeoutId;
             const LAST_VIEW_KEY = 'sendu:lastView';
+            const MAX_EXPIRATION_DAYS = 15;
             let currentUser = null;
             let postAuthRedirect = null;
+
+            // Theme toggle functionality
+            const initTheme = () => {
+                const savedTheme = localStorage.getItem('sendu:theme');
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const isDark = savedTheme ? savedTheme === 'dark' : prefersDark;
+                document.documentElement.classList.toggle('dark', isDark);
+            };
+            
+            const toggleTheme = () => {
+                const isDark = document.documentElement.classList.toggle('dark');
+                localStorage.setItem('sendu:theme', isDark ? 'dark' : 'light');
+            };
+            
+            // Initialize theme immediately
+            initTheme();
+            
+            // Add theme toggle listener
+            const themeToggleBtn = document.getElementById('themeToggle');
+            if (themeToggleBtn) {
+                themeToggleBtn.addEventListener('click', toggleTheme);
+            }
 
             const normalizePath = (path) => {
                 if (!path) return '/';
@@ -1945,6 +1993,11 @@
                         setContainerAlignment(true);
                         setUploadViewPadding(false);
                         loadResetPasswordView();
+                        break;
+                    case '/verify-email':
+                        setContainerAlignment(true);
+                        setUploadViewPadding(false);
+                        loadVerifyEmailView();
                         break;
                     case '/admin':
                         if (currentUser && currentUser.role === 'admin') {
@@ -2748,7 +2801,7 @@
                                 <td class="py-3 px-2 dark:text-gray-300 light:text-gray-700">${new Date(report.createdAt).toLocaleDateString()}</td>
                                 <td class="py-3 px-2 dark:text-gray-300 light:text-gray-700">
                                     <a href="/share/${report.fileId}" target="_blank" class="text-blue-400 hover:underline truncate block max-w-[150px]">
-                                        ${report.fileName || 'Archivo eliminado'}
+                                        ${report.originalName || 'Archivo eliminado'}
                                     </a>
                                 </td>
                                 <td class="py-3 px-2 dark:text-gray-300 light:text-gray-700 max-w-[200px] truncate" title="${report.reason}">${report.reason}</td>
@@ -2843,343 +2896,47 @@
             }
 
             // --- Funciones de Inicialización de Vistas ---
-            function initUploadListeners() {
-                const dropZone = document.getElementById('drop-zone');
-                const fileInput = document.getElementById('file-input');
-                const uploadOptions = document.getElementById('upload-options');
-                const startUploadBtn = document.getElementById('start-upload');
-                const uploadList = document.getElementById('upload-list');
-                const dropOverlay = document.getElementById('drop-overlay');
-                const dropMainText = document.getElementById('drop-main-text');
-                const dropSubText = document.getElementById('drop-sub-text');
-                
-                let selectedFile = null;
+            function loadVerifyEmailView() {
+                const template = document.getElementById('verify-email-view-template').content.cloneNode(true);
+                appContainer.innerHTML = '';
+                appContainer.appendChild(template);
+                initIcons();
 
-                // Drag & Drop
-                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                    dropZone.addEventListener(eventName, preventDefaults, false);
-                });
+                const urlParams = new URLSearchParams(window.location.search);
+                const token = urlParams.get('token');
 
-                function preventDefaults(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
+                const loadingEl = document.getElementById('verify-loading');
+                const successEl = document.getElementById('verify-success');
+                const errorEl = document.getElementById('verify-error');
+                const errorMsgEl = document.getElementById('verify-error-msg');
+
+                if (!token) {
+                    loadingEl.classList.add('hidden');
+                    errorEl.classList.remove('hidden');
+                    errorMsgEl.textContent = 'Token de verificación faltante.';
+                    return;
                 }
 
-                ['dragenter', 'dragover'].forEach(eventName => {
-                    dropZone.addEventListener(eventName, highlight, false);
-                });
-
-                ['dragleave', 'drop'].forEach(eventName => {
-                    dropZone.addEventListener(eventName, unhighlight, false);
-                });
-
-                function highlight(e) {
-                    dropOverlay.classList.remove('opacity-0');
-                    dropOverlay.classList.add('opacity-100');
-                }
-
-                function unhighlight(e) {
-                    dropOverlay.classList.remove('opacity-100');
-                    dropOverlay.classList.add('opacity-0');
-                }
-
-                dropZone.addEventListener('drop', handleDrop, false);
-
-                function handleDrop(e) {
-                    const dt = e.dataTransfer;
-                    const files = dt.files;
-                    handleFiles(files);
-                }
-
-                fileInput.addEventListener('change', function() {
-                    handleFiles(this.files);
-                });
-
-                function handleFiles(files) {
-                    if (files.length > 0) {
-                        selectedFile = files[0];
-                        dropMainText.textContent = selectedFile.name;
-                        dropSubText.textContent = formatBytes(selectedFile.size);
-                        uploadOptions.classList.remove('hidden');
-                        
-                        // Scroll suave hacia las opciones
-                        setTimeout(() => {
-                            uploadOptions.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }, 100);
+                // Verificar token
+                fetch('/api/auth/verify-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token })
+                })
+                .then(res => res.json().then(data => ({ status: res.status, body: data })))
+                .then(({ status, body }) => {
+                    loadingEl.classList.add('hidden');
+                    if (status === 200) {
+                        successEl.classList.remove('hidden');
+                    } else {
+                        errorEl.classList.remove('hidden');
+                        errorMsgEl.textContent = body.message || 'Error al verificar el email.';
                     }
-                }
-
-                startUploadBtn.addEventListener('click', () => {
-                    if (selectedFile) {
-                        uploadFile(selectedFile);
-                        // Reset UI
-                        selectedFile = null;
-                        fileInput.value = '';
-                        dropMainText.textContent = 'Arrastra tu archivo aquí';
-                        dropSubText.textContent = 'o haz clic para seleccionar';
-                        uploadOptions.classList.add('hidden');
-                    }
-                });
-
-                async function uploadFile(file) {
-                    const password = document.getElementById('password').value;
-                    const expires = document.getElementById('expires').value;
-                    const maxDownloads = document.getElementById('maxDownloads').value;
-
-                    // Crear elemento de progreso
-                    const template = document.getElementById('upload-item-template').content.cloneNode(true);
-                    const item = template.querySelector('.upload-item');
-                    const fileNameEl = item.querySelector('.file-name');
-                    const progressBar = item.querySelector('progress');
-                    const statusText = item.querySelector('.status-text');
-                    const speedText = item.querySelector('.speed-text');
-                    const resultLink = item.querySelector('.result-link');
-                    const linkInput = resultLink.querySelector('input');
-                    const copyBtn = resultLink.querySelector('.copy-button');
-                    const deleteBtn = resultLink.querySelector('.delete-upload-btn');
-                    const errorMessage = item.querySelector('.error-message');
-                    const cancelBtn = item.querySelector('.cancel-upload-btn');
-
-                    fileNameEl.textContent = file.name;
-                    uploadList.prepend(item);
-                    initIcons();
-
-                    // Lógica de subida por chunks
-                    const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB
-                    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-                    let uploadId = null;
-                    let isCancelled = false;
-
-                    cancelBtn.classList.remove('hidden');
-                    cancelBtn.onclick = () => {
-                        isCancelled = true;
-                        statusText.textContent = 'Cancelado';
-                        statusText.classList.add('text-red-400');
-                        cancelBtn.classList.add('hidden');
-                    };
-
-                    try {
-                        // 1. Iniciar subida
-                        const initRes = await fetch('/api/upload/init', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                fileName: file.name,
-                                size: file.size,
-                                mimeType: file.type,
-                                password,
-                                expires,
-                                maxDownloads
-                            })
-                        });
-
-                        if (!initRes.ok) {
-                            const err = await initRes.json();
-                            throw new Error(err.message || 'Error al iniciar subida');
-                        }
-
-                        const initData = await initRes.json();
-                        uploadId = initData.uploadId;
-
-                        // 2. Subir chunks
-                        const startTime = Date.now();
-                        
-                        for (let i = 0; i < totalChunks; i++) {
-                            if (isCancelled) throw new Error('Subida cancelada por el usuario');
-
-                            const start = i * CHUNK_SIZE;
-                            const end = Math.min(file.size, start + CHUNK_SIZE);
-                            const chunk = file.slice(start, end);
-
-                            await fetch(`/api/upload/chunk?uploadId=${uploadId}&index=${i}`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/octet-stream' },
-                                body: chunk
-                            });
-
-                            // Actualizar progreso
-                            const percent = Math.round(((i + 1) / totalChunks) * 100);
-                            progressBar.value = percent;
-                            
-                            // Calcular velocidad
-                            const elapsed = (Date.now() - startTime) / 1000;
-                            const uploaded = end;
-                            const speed = uploaded / elapsed; // bytes/sec
-                            speedText.textContent = `${formatBytes(speed)}/s`;
-                        }
-
-                        // 3. Completar subida
-                        statusText.textContent = 'Procesando...';
-                        const completeRes = await fetch('/api/upload/complete', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ uploadId })
-                        });
-
-                        if (!completeRes.ok) {
-                            const err = await completeRes.json();
-                            throw new Error(err.message || 'Error al completar subida');
-                        }
-
-                        const completeData = await completeRes.json();
-                        
-                        // Éxito
-                        statusText.textContent = '¡Completado!';
-                        statusText.classList.add('text-green-400');
-                        progressBar.classList.add('hidden');
-                        speedText.textContent = '';
-                        cancelBtn.classList.add('hidden');
-                        
-                        resultLink.classList.remove('hidden');
-                        linkInput.value = completeData.downloadUrl;
-                        
-                        // Copiar al portapapeles
-                        copyBtn.onclick = () => {
-                            navigator.clipboard.writeText(completeData.downloadUrl);
-                            const originalText = copyBtn.innerHTML;
-                            copyBtn.innerHTML = '<i data-lucide="check" class="w-5 h-5"></i> Copiado';
-                            lucide.createIcons();
-                            setTimeout(() => {
-                                copyBtn.innerHTML = originalText;
-                                lucide.createIcons();
-                            }, 2000);
-                        };
-
-                        // Eliminar archivo (para usuarios anónimos o dueños)
-                        deleteBtn.onclick = async () => {
-                            const confirmed = await showConfirmDialog({
-                                title: 'Eliminar Archivo',
-                                message: '¿Estás seguro de eliminar este archivo? El enlace dejará de funcionar inmediatamente.',
-                                confirmText: 'Eliminar',
-                                tone: 'danger'
-                            });
-                            
-                            if (confirmed) {
-                                try {
-                                    await fetch(`/api/files/${completeData.id}`, { method: 'DELETE' });
-                                    item.remove();
-                                    showNotification('Archivo eliminado', 'success');
-                                } catch (err) {
-                                    showNotification('Error al eliminar archivo', 'error');
-                                }
-                            }
-                        };
-
-                        // Actualizar dashboard si está logueado
-                        if (currentUser) {
-                            // Opcional: refrescar contadores si estuvieran visibles
-                        }
-
-                    } catch (err) {
-                        console.error(err);
-                        statusText.textContent = 'Error';
-                        statusText.classList.add('text-red-400');
-                        errorMessage.textContent = err.message;
-                        errorMessage.classList.remove('hidden');
-                        cancelBtn.classList.add('hidden');
-                    }
-                }
-            }
-
-            function initDownloadListeners(fileId) {
-                const downloadForm = document.getElementById('download-form');
-                const passwordGroup = document.getElementById('password-group');
-                const passwordInput = document.getElementById('download-password');
-                const fileNameEl = document.getElementById('file-name');
-                const fileSizeEl = document.getElementById('file-size');
-                const expiryInfoEl = document.getElementById('expiry-info');
-                const errorMsg = document.getElementById('download-error-message');
-                const reportBtn = document.getElementById('report-file-btn');
-                const previewContainer = document.getElementById('file-preview-container');
-                const previewImg = document.getElementById('file-preview-img');
-
-                // Cargar metadata
-                fetch(`/api/meta/${fileId}`)
-                    .then(res => {
-                        if (res.status === 410) throw new Error('El archivo ha expirado o alcanzado el límite de descargas.');
-                        if (res.status === 404) throw new Error('Archivo no encontrado.');
-                        if (!res.ok) throw new Error('Error al cargar información del archivo.');
-                        return res.json();
-                    })
-                    .then(data => {
-                        fileNameEl.textContent = data.fileName;
-                        fileSizeEl.textContent = formatBytes(data.size);
-                        
-                        if (data.requiresPassword) {
-                            passwordGroup.classList.remove('hidden');
-                            passwordInput.required = true;
-                        }
-
-                        if (data.expiresAt) {
-                            const date = new Date(data.expiresAt).toLocaleDateString();
-                            expiryInfoEl.textContent = `Expira el: ${date}`;
-                        }
-                        
-                        if (data.downloadsLeft !== null) {
-                            const currentText = expiryInfoEl.textContent;
-                            expiryInfoEl.textContent = `${currentText ? currentText + ' • ' : ''}${data.downloadsLeft} descargas restantes`;
-                        }
-
-                        // Preview de imagen
-                        if (data.mimeType && data.mimeType.startsWith('image/')) {
-                            previewImg.src = `/api/preview/${data.id}`;
-                            previewContainer.classList.remove('hidden');
-                            previewContainer.classList.add('flex');
-                        }
-                    })
-                    .catch(err => {
-                        errorMsg.textContent = err.message;
-                        errorMsg.classList.remove('hidden');
-                        downloadForm.classList.add('hidden');
-                        expiryInfoEl.classList.add('hidden');
-                    });
-
-                downloadForm.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    const password = passwordInput.value;
-                    triggerDownloadFallback(fileId, password);
-                });
-
-                // Reportar archivo
-                reportBtn.addEventListener('click', () => {
-                    const template = document.getElementById('report-modal-template').content.cloneNode(true);
-                    document.body.appendChild(template);
-                    
-                    const modalOverlay = document.getElementById('report-modal-overlay');
-                    const form = document.getElementById('report-form');
-                    const cancelBtn = document.getElementById('cancel-report-btn');
-                    const reasonInput = document.getElementById('report-reason');
-                    const reportError = document.getElementById('report-error');
-
-                    const close = () => modalOverlay.remove();
-                    
-                    cancelBtn.onclick = close;
-                    modalOverlay.onclick = (e) => {
-                        if (e.target === modalOverlay) close();
-                    };
-
-                    form.onsubmit = async (e) => {
-                        e.preventDefault();
-                        try {
-                            const res = await fetch(`/api/report/${fileId}`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ reason: reasonInput.value })
-                            });
-                            
-                            if (res.ok) {
-                                showNotification('Reporte enviado. Gracias.', 'success');
-                                close();
-                            } else {
-                                const data = await res.json();
-                                reportError.textContent = data.message || 'Error al enviar reporte';
-                                reportError.classList.remove('hidden');
-                            }
-                        } catch (err) {
-                            reportError.textContent = 'Error de conexión';
-                            reportError.classList.remove('hidden');
-                        }
-                    };
+                })
+                .catch(err => {
+                    loadingEl.classList.add('hidden');
+                    errorEl.classList.remove('hidden');
+                    errorMsgEl.textContent = 'Error de conexión.';
                 });
             }
 
@@ -3263,10 +3020,20 @@
                         const data = await res.json();
 
                         if (res.ok) {
-                            currentUser = data.user;
-                            updateUserMenu();
-                            showNotification('Cuenta creada con éxito', 'success');
-                            navigateTo('/dashboard');
+                            if (data.requireVerification) {
+                                // El usuario necesita verificar su email antes de poder loguearse
+                                showNotification('Cuenta creada. Revisa tu email para verificar tu cuenta.', 'success', 5000);
+                                navigateTo('/login');
+                            } else if (data.user) {
+                                // Si el servidor devuelve user directamente (modo dev sin verificación)
+                                currentUser = data.user;
+                                updateUserMenu();
+                                showNotification('Cuenta creada con éxito', 'success');
+                                navigateTo('/dashboard');
+                            } else {
+                                showNotification('Registro completado', 'success');
+                                navigateTo('/login');
+                            }
                         } else {
                             errorEl.textContent = data.message;
                             errorEl.classList.remove('hidden');
@@ -3597,182 +3364,688 @@
                 });
             }
 
-            function formatBytes(bytes, decimals = 2) {
-                if (!+bytes) return '0 Bytes';
-                const k = 1024;
-                const dm = decimals < 0 ? 0 : decimals;
-                const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
-            }
+            function initUploadListeners() {
+                const dropZone = document.getElementById('drop-zone');
+                const fileInput = document.getElementById('file-input');
+                const dropOverlay = document.getElementById('drop-overlay');
+                const uploadForm = document.getElementById('upload-form');
+                const uploadOptions = document.getElementById('upload-options');
+                const startUploadBtn = document.getElementById('start-upload');
+                const clearSelectionBtn = document.getElementById('clear-selection');
+                const expiresInput = document.getElementById('expires');
+                const successBanner = document.getElementById('upload-success-banner');
+                const successUrlInput = document.getElementById('upload-success-url');
+                const successCopyBtn = document.getElementById('upload-success-copy');
+                let selectedFile = null;
 
-            // --- Theme Logic ---
-            const themeToggle = document.getElementById('themeToggle');
-            const html = document.documentElement;
-            
-            // Check local storage or system preference
-            const savedTheme = localStorage.getItem('theme');
-            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            
-            if (savedTheme) {
-                html.classList.remove('light', 'dark');
-                html.classList.add(savedTheme);
-                html.setAttribute('data-theme', savedTheme);
-            } else {
-                html.classList.remove('light', 'dark');
-                html.classList.add(systemTheme);
-                html.setAttribute('data-theme', systemTheme);
-            }
+                if (!dropZone) return;
 
-            if (themeToggle) {
-                themeToggle.addEventListener('click', () => {
-                    const isDark = html.classList.contains('dark');
-                    const newTheme = isDark ? 'light' : 'dark';
-                    
-                    html.classList.remove('light', 'dark');
-                    html.classList.add(newTheme);
-                    html.setAttribute('data-theme', newTheme);
-                    localStorage.setItem('theme', newTheme);
-                });
-            }
-
-            // --- Initialization ---
-            checkAuthStatus().then(() => {
-                renderRoute(window.location.pathname);
-            });
-
-        });
-    </script>
-    
-    <!-- Footer -->
-    <footer class="site-footer">
-        <div class="footer-container">
-            <div class="footer-brand">
-                <div class="footer-logo">
-                    <div class="footer-logo-icon">
-                        <img id="footer-logo-img" src="/assets/branding/sendu-light.svg" alt="Logo" class="branding-loading">
-                    </div>
-                    <span id="footer-brand-name" class="branding-loading">Sendu</span>
-                </div>
-                <p id="footer-tagline" class="footer-tagline branding-loading">
-                    Envía y comparte archivos de forma segura.
-                </p>
-            </div>
-            
-            <div class="footer-section">
-                <h3>Contacto</h3>
-                <div id="footer-contact-links" class="footer-links">
-                    <!-- Links dinámicos -->
-                </div>
-            </div>
-            
-            <div class="footer-section">
-                <h3>Más de nosotros</h3>
-                <div id="footer-more-links" class="footer-links">
-                    <!-- Links dinámicos -->
-                </div>
-            </div>
-        </div>
-
-        <script>
-            // Cargar configuración de marca (Header y Footer)
-            async function loadBrandingSettings() {
-                try {
-                    const res = await fetch('/api/settings/footer');
-                    if (!res.ok) return;
-                    const config = await res.json();
-                    
-                    // Aplicar configuración al Footer
-                    const brandNameEl = document.getElementById('footer-brand-name');
-                    const taglineEl = document.getElementById('footer-tagline');
-                    const footerLogoImgEl = document.getElementById('footer-logo-img');
-                    const contactLinksEl = document.getElementById('footer-contact-links');
-                    const moreLinksEl = document.getElementById('footer-more-links');
-                    
-                    if (brandNameEl) {
-                        if (config.hideFooterName) {
-                            brandNameEl.style.display = 'none';
-                        } else {
-                            brandNameEl.style.display = '';
-                            brandNameEl.textContent = config.brandName || 'Sendu';
+                function hideSuccessBanner() {
+                    if (successBanner) {
+                        successBanner.classList.add('hidden');
+                    }
+                    if (successUrlInput) {
+                        successUrlInput.value = '';
+                        successUrlInput.removeAttribute('value');
+                    }
+                    if (successCopyBtn) {
+                        successCopyBtn.innerHTML = '<i data-lucide="copy" class="icon"></i> Copiar enlace';
+                        if (typeof lucide !== 'undefined') {
+                            lucide.createIcons();
                         }
                     }
-                    if (taglineEl) taglineEl.textContent = config.tagline || '';
-                    
-                    // Aplicar configuración al Header
-                    const headerLogoLight = document.querySelector('.brand-logo.logo-light');
-                    const headerLogoDark = document.querySelector('.brand-logo.logo-dark');
-                    const headerBrandNameEl = document.getElementById('header-brand-name');
+                }
 
-                    if (headerBrandNameEl) {
-                        if (config.hideHeaderName) {
-                            headerBrandNameEl.style.display = 'none';
-                        } else {
-                            headerBrandNameEl.style.display = '';
-                            headerBrandNameEl.textContent = config.headerBrandName || config.brandName || 'Sendu';
+                hideSuccessBanner();
+
+                if (successCopyBtn && successUrlInput) {
+                    successCopyBtn.addEventListener('click', () => {
+                        const url = successUrlInput.value.trim();
+                        if (!url) {
+                            showNotification('No hay enlace disponible para copiar.', 'info', 2500);
+                            return;
                         }
-                    }
-                    
-                    if (headerLogoLight && config.logoLight) {
-                        headerLogoLight.src = config.logoLight;
-                    }
-                    if (headerLogoDark && config.logoDark) {
-                        headerLogoDark.src = config.logoDark;
-                    }
-
-                    // Lógica de logo del footer (adaptable al tema)
-                    if (footerLogoImgEl) {
-                        const updateFooterLogo = () => {
-                            const isDark = document.documentElement.classList.contains('dark');
-                            footerLogoImgEl.src = isDark ? (config.logoDark || config.logoLight) : (config.logoLight || config.logoDark);
-                        };
-                        
-                        updateFooterLogo();
-                        
-                        // Observer para cambio de tema
-                        const observer = new MutationObserver((mutations) => {
-                            mutations.forEach((mutation) => {
-                                if (mutation.attributeName === 'class') {
-                                    updateFooterLogo();
-                                }
-                            });
+                        if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+                            showNotification('La API del portapapeles no esta disponible.', 'error', 2500);
+                            return;
+                        }
+                        navigator.clipboard.writeText(url).then(() => {
+                            successCopyBtn.innerHTML = '<i data-lucide="check" class="icon"></i> Copiado';
+                            lucide.createIcons();
+                            setTimeout(() => {
+                                successCopyBtn.innerHTML = '<i data-lucide="copy" class="icon"></i> Copiar enlace';
+                                lucide.createIcons();
+                            }, 2000);
+                            showNotification('Enlace copiado al portapapeles.', 'success', 2500);
+                        }).catch(() => {
+                            showNotification('No se pudo copiar el enlace.', 'error', 2500);
                         });
-                        observer.observe(document.documentElement, { attributes: true });
-                    }
+                    });
+                }
 
-                    // Renderizar links del footer
-                    const renderLinks = (container, links) => {
-                        if (!container || !links) return;
-                        container.innerHTML = links.map(link => 
-                            `<a href="${link.url}" class="footer-link" target="_blank">${link.text}</a>`
-                        ).join('');
+                if (uploadForm && startUploadBtn) {
+                    uploadForm.addEventListener('submit', (event) => {
+                        event.preventDefault(); // Evitar recarga al presionar Enter
+
+                        if (!selectedFile || startUploadBtn.disabled) {
+                            showNotification('Selecciona un archivo antes de subir.', 'info', 2500);
+                            return;
+                        }
+
+                        startUploadBtn.click();
+                    });
+                }
+
+                if (expiresInput) {
+                    expiresInput.addEventListener('input', () => {
+                        const rawDigits = expiresInput.value.replace(/\D+/g, '');
+                        if (rawDigits === '') {
+                            expiresInput.value = '';
+                            return;
+                        }
+                        let numericValue = parseInt(rawDigits, 10);
+                        if (Number.isNaN(numericValue)) {
+                            expiresInput.value = '';
+                            return;
+                        }
+                        if (numericValue > MAX_EXPIRATION_DAYS) {
+                            numericValue = MAX_EXPIRATION_DAYS;
+                            showNotification(`La expiración máxima es de ${MAX_EXPIRATION_DAYS} días.`, 'info', 2500);
+                        }
+                        expiresInput.value = String(numericValue);
+                    });
+                }
+                if (clearSelectionBtn) {
+                    clearSelectionBtn.disabled = true;
+                    clearSelectionBtn.classList.add("opacity-50", "pointer-events-none");
+                    clearSelectionBtn.addEventListener("click", () => {
+                        resetDropZone();
+                    });
+                }
+
+                // Prevenir comportamientos por defecto
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, preventDefaults, false);
+                    document.body.addEventListener(eventName, preventDefaults, false);
+                });
+
+                // Resaltar al arrastrar
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, () => dropOverlay.style.opacity = '1', false);
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, () => dropOverlay.style.opacity = '0', false);
+                });
+
+                // Manejar archivos soltados
+                dropZone.addEventListener('drop', (e) => {
+                    const dt = e.dataTransfer;
+                    const files = dt.files;
+                    if (files.length) {
+                        fileInput.files = files; // Asignar al input
+                        showUploadOptions(files[0]);
+                    }
+                }, false);
+
+                // Manejar selección de input
+                fileInput.addEventListener('change', () => {
+                    if (fileInput.files.length > 0) {
+                        showUploadOptions(fileInput.files[0]);
+                    }
+                });
+
+                // Mostrar opciones cuando se selecciona un archivo
+                function showUploadOptions(file) {
+                    selectedFile = file;
+                    hideSuccessBanner();
+                    
+                    // Actualizar la zona de drop para mostrar el archivo seleccionado
+                    const dropIcon = dropZone.querySelector('[data-lucide="upload-cloud"], [data-lucide="file-check"]');
+                    const mainText = dropZone.querySelector('#drop-main-text');
+                    const subText = dropZone.querySelector('#drop-sub-text');
+                    
+                    if (dropIcon) {
+                        dropIcon.setAttribute('data-lucide', 'file-check');
+                    }
+                    mainText.textContent = `Archivo seleccionado: ${file.name}`;
+                    subText.textContent = `${formatBytes(file.size)} • Haz clic para cambiar`;
+                    
+                    // Mostrar las opciones
+                    uploadOptions.classList.remove('hidden');
+                    if (clearSelectionBtn) {
+                        clearSelectionBtn.disabled = false;
+                        clearSelectionBtn.classList.remove("opacity-50", "pointer-events-none");
+                    }
+                    
+                    // Refrescar iconos
+                    lucide.createIcons();
+                    
+                    // Scroll suave hacia las opciones
+                    uploadOptions.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+
+                // Botón de iniciar subida
+                startUploadBtn.addEventListener('click', async () => {
+                    if (!selectedFile) return;
+
+                    const originalBtnContent = startUploadBtn.innerHTML;
+                    const mainText = dropZone.querySelector('#drop-main-text');
+                    const subText = dropZone.querySelector('#drop-sub-text');
+                    uploadOptions.classList.add('hidden');
+                    dropZone.classList.add('opacity-60', 'pointer-events-none');
+                    startUploadBtn.disabled = true;
+                    startUploadBtn.innerHTML = '<i data-lucide="loader-2" class="icon animate-spin"></i> Subiendo...';
+                    if (mainText && subText) {
+                        mainText.textContent = `Subiendo: ${selectedFile.name}`;
+                        subText.textContent = 'No cierres esta pestaña hasta finalizar.';
+                    }
+                    lucide.createIcons();
+
+                    const currentFileName = selectedFile ? selectedFile.name : '';
+                    let uploadSuccess = false;
+                    let lastUploadResult = null;
+
+                    try {
+                        const results = await handleFiles([selectedFile]);
+                        if (Array.isArray(results) && results.length > 0) {
+                            lastUploadResult = results[0];
+                        }
+                        uploadSuccess = true;
+                    } catch (err) {
+                        console.error('Error global en subida:', err);
+                    } finally {
+                        if (uploadSuccess && lastUploadResult && lastUploadResult.downloadUrl) {
+                            showNotification('Archivo listo! Encuentra el enlace generado debajo.', 'success', 4000);
+                        }
+                        startUploadBtn.disabled = false;
+                        startUploadBtn.innerHTML = originalBtnContent;
+                        resetDropZone(uploadSuccess ? { state: 'success', fileName: currentFileName, downloadUrl: lastUploadResult?.downloadUrl } : { state: 'default' });
+                    }
+                });
+
+                // Función para resetear la zona de drop
+
+function resetDropZone(options = {}) {
+    const { state = 'default', fileName, downloadUrl } = options;
+    const dropIcon = dropZone.querySelector('[data-lucide="file-check"], [data-lucide="upload-cloud"]');
+    const mainText = dropZone.querySelector('#drop-main-text');
+    const subText = dropZone.querySelector('#drop-sub-text');
+
+    dropZone.classList.remove('opacity-60', 'pointer-events-none');
+    uploadOptions.classList.add('hidden');
+    selectedFile = null;
+    fileInput.value = '';
+
+    if (dropIcon) {
+        dropIcon.setAttribute('data-lucide', 'upload-cloud');
+    }
+
+    if (state === 'success') {
+        if (mainText) {
+            mainText.textContent = 'Archivo subido correctamente';
+        }
+        if (subText) {
+            subText.textContent = downloadUrl
+                ? 'Comparte el enlace generado a continuación.'
+                : 'Copia el enlace generado abajo o selecciona un nuevo archivo.';
+        }
+        if (successBanner && successUrlInput && downloadUrl) {
+            successBanner.classList.remove('hidden');
+            successUrlInput.value = downloadUrl;
+            successUrlInput.setAttribute('value', downloadUrl);
+        } else {
+            hideSuccessBanner();
+        }
+    } else {
+        if (mainText) {
+            mainText.textContent = 'Arrastra tu archivo aquí';
+        }
+        if (subText) {
+            subText.textContent = 'o haz clic para seleccionar';
+        }
+        hideSuccessBanner();
+    }
+    if (clearSelectionBtn) {
+        clearSelectionBtn.disabled = true;
+        clearSelectionBtn.classList.add('opacity-50', 'pointer-events-none');
+    }
+
+    lucide.createIcons();
+}
+
+            }
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            async function handleFiles(files) {
+                return Promise.all([...files].map(file => uploadFile(file)));
+            }
+
+            async function uploadFile(file) {
+                const uploadList = document.getElementById('upload-list');
+                const template = document.getElementById('upload-item-template').content.cloneNode(true);
+                const item = template.querySelector('div[role="progressbar"]');
+                const fileNameEl = item.querySelector('.file-name');
+                const statusTextEl = item.querySelector('.status-text');
+                const progressEl = item.querySelector('progress');
+                const resultLinkEl = item.querySelector('.result-link');
+                const resultInput = item.querySelector('.result-link input');
+                const copyButton = item.querySelector('.copy-button');
+                const errorEl = item.querySelector('.error-message');
+
+                fileNameEl.textContent = file.name;
+                uploadList.prepend(item);
+                
+                // Scroll hacia el elemento de progreso
+                setTimeout(() => {
+                    item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+                
+                // --- CHUNKED UPLOAD ---
+                const CONCURRENCY = 4;
+
+                const passwordInput = document.getElementById('password');
+                const expiresInput = document.getElementById('expires');
+                const maxDownloadsInput = document.getElementById('maxDownloads');
+
+                const password = passwordInput ? passwordInput.value : '';
+                const expiresInputValue = expiresInput ? expiresInput.value.trim() : '';
+                const maxDownloads = maxDownloadsInput ? maxDownloadsInput.value : '';
+
+                let expiresDays = null;
+                if (expiresInputValue !== '') {
+                    const parsedExpires = parseInt(expiresInputValue, 10);
+                    if (Number.isNaN(parsedExpires)) {
+                        errorEl.textContent = 'La expiración debe ser un número entero.';
+                        errorEl.classList.remove('hidden');
+                        return;
+                    }
+                    expiresDays = Math.max(0, Math.min(parsedExpires, MAX_EXPIRATION_DAYS));
+                }
+
+                const expiresHours = (expiresDays !== null && expiresDays > 0) ? expiresDays * 24 : null;
+
+                try {
+                    console.log('🚀 Iniciando subida de archivo:', file.name, 'Tamaño:', file.size);
+                    statusTextEl.textContent = 'Inicializando... 0%';
+                    progressEl.value = 0;
+                    progressEl.classList.remove('hidden');
+                    // 1) init
+                    const initRes = await fetch('/api/upload/init', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            fileName: file.name,
+                            size: file.size,
+                            mimeType: file.type || 'application/octet-stream',
+                            expires: expiresHours,
+                            maxDownloads: maxDownloads || null,
+                            password: password || null
+                        })
+                    });
+                    const initJson = await initRes.json();
+                    console.log('📋 Init response:', initJson);
+                    if (!initRes.ok) throw new Error(initJson.message || 'No se pudo iniciar la subida.');
+
+                    const uploadId = initJson.uploadId;
+                    const CHUNK_SIZE = initJson.chunkSize || (10 * 1024 * 1024); // Use server chunk size or default 10MB
+                    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+                    let uploadedBytes = 0;
+                    let completedChunks = 0;
+                    console.log(`📦 Total chunks: ${totalChunks}, Chunk size: ${CHUNK_SIZE / 1024 / 1024}MB`);
+
+                    // 2) subir chunks en paralelo
+                    const uploadChunk = async (i) => {
+                        const start = i * CHUNK_SIZE;
+                        const end = Math.min(start + CHUNK_SIZE, file.size);
+                        const blob = file.slice(start, end);
+                        console.log(`⬆️ Subiendo chunk ${i + 1} de ${totalChunks} (${Math.round((end - start) / 1024 / 1024)}MB)`);
+                        const res = await fetch(`/api/upload/chunk?uploadId=${encodeURIComponent(uploadId)}&index=${i}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/octet-stream' },
+                            body: blob
+                        });
+                        if (!res.ok) {
+                            const err = await res.json().catch(() => ({}));
+                            throw new Error(err.message || `Fallo subiendo chunk ${i}`);
+                        }
+                        uploadedBytes += (end - start);
+                        completedChunks += 1;
+                        const percent = (uploadedBytes / file.size) * 100;
+                        progressEl.value = percent;
+                        statusTextEl.textContent = `${Math.round(percent)}% • Chunk ${completedChunks}/${totalChunks}`;
+                        console.log(`✅ Chunk ${i + 1} completado. Progreso: ${Math.round(percent)}%`);
                     };
 
-                    renderLinks(contactLinksEl, config.contactLinks);
-                    renderLinks(moreLinksEl, config.moreLinks);
+                    let cursor = 0;
+                    const workers = new Array(Math.min(CONCURRENCY, totalChunks)).fill(0).map(async () => {
+                        while (cursor < totalChunks) {
+                            const currentIndex = cursor++;
+                            await uploadChunk(currentIndex);
+                        }
+                    });
+                    await Promise.all(workers);
+
+                    console.log('✨ Todos los chunks subidos, finalizando...');
+                    // 3) complete
+                    statusTextEl.textContent = 'Finalizando...';
+                    const compRes = await fetch('/api/upload/complete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ uploadId })
+                    });
+                    const compJson = await compRes.json();
+                    console.log('🎉 Upload completado:', compJson);
+                    if (!compRes.ok) throw new Error(compJson.message || 'No se pudo finalizar la subida.');
+
+                    statusTextEl.textContent = '100% - Completado!';
+                    statusTextEl.classList.add('text-green-400');
+                    resultLinkEl.classList.remove('hidden');
+                    resultInput.value = compJson.downloadUrl;
+                    resultInput.setAttribute('value', compJson.downloadUrl);
+                    setTimeout(() => {
+                        try {
+                            resultInput.focus({ preventScroll: true });
+                            resultInput.select();
+                        } catch (focusErr) {
+                            console.debug('No se pudo enfocar el campo del enlace:', focusErr);
+                        }
+                    }, 100);
+
+                    copyButton.addEventListener('click', () => {
+                        if (!compJson.downloadUrl) {
+                            showNotification('No hay enlace disponible para copiar.', 'info', 2500);
+                            return;
+                        }
+                        if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+                            showNotification('La API del portapapeles no esta disponible.', 'error', 2500);
+                            return;
+                        }
+                        navigator.clipboard.writeText(compJson.downloadUrl).then(() => {
+                            copyButton.innerHTML = '<i data-lucide="check" class="icon"></i> Copiado';
+                            lucide.createIcons();
+                            setTimeout(() => {
+                                copyButton.innerHTML = '<i data-lucide="copy" class="icon"></i> Copiar enlace';
+                                lucide.createIcons();
+                            }, 2000);
+                            showNotification('Enlace copiado al portapapeles.', 'success', 2500);
+                        }).catch(() => {
+                            showNotification('No se pudo copiar el enlace.', 'error', 2500);
+                        });
+                    });
+
+                    return compJson;
 
                 } catch (err) {
-                    console.error('Error cargando branding settings:', err);
+                    console.error('❌ Error durante la subida:', err);
+                    statusTextEl.textContent = 'Error';
+                    statusTextEl.classList.add('text-red-400');
+                    errorEl.textContent = err.message || 'Error desconocido';
+                    errorEl.classList.remove('hidden');
+                    throw err;
                 } finally {
-                    // Mostrar elementos una vez cargados (o si falla)
-                    document.querySelectorAll('.branding-loading').forEach(el => {
-                        el.classList.remove('branding-loading');
+                    lucide.createIcons();
+                }
+            }
+
+            // --- Lógica de Descarga (Download) ---
+            async function initDownloadListeners(fileId) {
+                const form = document.getElementById('download-form');
+                const passwordGroup = document.getElementById('password-group');
+                const passwordInput = document.getElementById('download-password');
+                const fileNameEl = document.getElementById('file-name');
+                const fileSizeEl = document.getElementById('file-size');
+                const errorEl = document.getElementById('download-error-message');
+                const expiryEl = document.getElementById('expiry-info');
+                const downloadBtn = document.getElementById('download-button');
+                
+                const clearDownloadError = () => {
+                    if (errorEl) {
+                        errorEl.textContent = '';
+                        errorEl.classList.add('hidden');
+                    }
+                };
+                const renderDownloadError = (message) => {
+                    if (errorEl) {
+                        errorEl.textContent = message;
+                        errorEl.classList.remove('hidden');
+                    }
+                };
+
+                try {
+                    // 1. Obtener metadata
+                    const metaRes = await fetch(`/api/meta/${fileId}`);
+                    if (!metaRes.ok) {
+                        const errData = await metaRes.json().catch(() => ({ message: 'Error al obtener metadatos.' }));
+                        throw new Error(errData.message);
+                    }
+                    const meta = await metaRes.json();
+
+                    clearDownloadError();
+                    
+                    fileNameEl.textContent = meta.fileName;
+                    fileSizeEl.textContent = formatBytes(meta.size);
+
+                    let expiryText = [];
+                    if (meta.expiresAt) {
+                         expiryText.push(`Expira: ${new Date(meta.expiresAt).toLocaleString()}`);
+                    }
+                    if (meta.downloadsLeft) {
+                        expiryText.push(`Descargas restantes: ${meta.downloadsLeft}`);
+                    }
+                    const expiryMessage = expiryText.join(' | ');
+                    expiryEl.textContent = expiryMessage;
+                    if (expiryMessage.length > 0) {
+                        expiryEl.classList.remove('hidden');
+                    } else {
+                        expiryEl.classList.add('hidden');
+                    }
+
+                    // 2. Configurar el manejador de descargas
+                    if (meta.requiresPassword) {
+                        // LÓGICA ANTERIOR PARA ARCHIVOS CON CONTRASEÑA
+                        passwordGroup.classList.remove('hidden');
+                        if (passwordInput) {
+                            passwordInput.required = true;
+                            passwordInput.setAttribute('name', 'password');
+                        }
+                        
+                        form.addEventListener('submit', async (e) => {
+                            e.preventDefault();
+                            clearDownloadError();
+                            downloadBtn.disabled = true;
+                            downloadBtn.innerHTML = '<i data-lucide="loader-2" class="icon animate-spin"></i> Procesando...';
+                            lucide.createIcons();
+                            
+                            try {
+                                const payload = { password: passwordInput.value };
+                                const downloadRes = await fetch(`/api/download/${fileId}`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Accept': 'application/json',
+                                        'X-Download-Check': 'true'
+                                    },
+                                    credentials: 'include',
+                                    body: JSON.stringify(payload)
+                                });
+
+                                const validation = await downloadRes.json();
+                                if (!downloadRes.ok || !validation || !validation.ok) {
+                                    throw new Error(validation?.message || 'No se pudo preparar la descarga.');
+                                }
+
+                                triggerDownloadFallback(fileId, passwordInput.value);
+                                showNotification('Descarga iniciada.', 'success', 2500);
+
+                            } catch (err) {
+                                renderDownloadError(err.message);
+                            } finally {
+                                downloadBtn.disabled = false;
+                                downloadBtn.innerHTML = '<i data-lucide="download" class="icon"></i> Descargar archivo';
+                                lucide.createIcons();
+                            }
+                        });
+                    } else {
+                        // Lógica para archivos sin contraseña (validación y descarga POST)
+                        form.addEventListener('submit', async (e) => {
+                            e.preventDefault();
+                            clearDownloadError();
+                            downloadBtn.disabled = true;
+                            downloadBtn.innerHTML = '<i data-lucide="loader-2" class="icon animate-spin"></i> Procesando...';
+                            lucide.createIcons();
+
+                            if (passwordInput) {
+                                passwordInput.required = false;
+                                passwordInput.removeAttribute('name');
+                            }
+
+                            try {
+                                const downloadRes = await fetch(`/api/download/${fileId}`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Accept': 'application/json',
+                                        'X-Download-Check': 'true'
+                                    },
+                                    credentials: 'include',
+                                    body: JSON.stringify({})
+                                });
+
+                                const validation = await downloadRes.json();
+                                if (!downloadRes.ok || !validation || !validation.ok) {
+                                    throw new Error(validation?.message || 'No se pudo preparar la descarga.');
+                                }
+
+                                triggerDownloadFallback(fileId, null);
+                                showNotification('Descarga iniciada.', 'success', 2500);
+
+                            } catch (err) {
+                                renderDownloadError(err.message);
+                            } finally {
+                                downloadBtn.disabled = false;
+                                downloadBtn.innerHTML = '<i data-lucide="download" class="icon"></i> Descargar archivo';
+                                lucide.createIcons();
+                            }
+                        });
+                    }
+                } catch (err) {
+                    renderDownloadError(err.message);
+                    form.classList.add('hidden');
+                }
+
+                // Report file button listener
+                const reportBtn = document.getElementById('report-file-btn');
+                if (reportBtn) {
+                    reportBtn.addEventListener('click', () => {
+                        const modalTemplate = document.getElementById('report-modal-template');
+                        if (!modalTemplate) return;
+                        
+                        const modalContent = modalTemplate.content.cloneNode(true);
+                        document.body.appendChild(modalContent);
+                        
+                        const overlay = document.getElementById('report-modal-overlay');
+                        const reportForm = document.getElementById('report-form');
+                        const cancelBtn = document.getElementById('cancel-report-btn');
+                        const reportError = document.getElementById('report-error');
+                        
+                        const closeModal = () => {
+                            if (overlay) overlay.remove();
+                        };
+                        
+                        overlay.addEventListener('click', (e) => {
+                            if (e.target === overlay) closeModal();
+                        });
+                        
+                        cancelBtn.addEventListener('click', closeModal);
+                        
+                        reportForm.addEventListener('submit', async (e) => {
+                            e.preventDefault();
+                            const reason = document.getElementById('report-reason').value.trim();
+                            
+                            if (!reason) {
+                                reportError.textContent = 'Por favor, describe el motivo del reporte.';
+                                reportError.classList.remove('hidden');
+                                return;
+                            }
+                            
+                            try {
+                                const res = await fetch(`/api/report/${fileId}`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ reason })
+                                });
+                                
+                                const data = await res.json();
+                                
+                                if (res.ok) {
+                                    showNotification('Reporte enviado correctamente. Gracias.', 'success');
+                                    closeModal();
+                                } else {
+                                    reportError.textContent = data.message || 'Error al enviar reporte.';
+                                    reportError.classList.remove('hidden');
+                                }
+                            } catch (err) {
+                                reportError.textContent = 'Error de conexión.';
+                                reportError.classList.remove('hidden');
+                            }
+                        });
+                        
+                        initIcons();
                     });
                 }
             }
             
-            // Iniciar carga
-            document.addEventListener('DOMContentLoaded', loadBrandingSettings);
+            
+            function formatBytes(bytes, decimals = 2) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const dm = decimals < 0 ? 0 : decimals;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+            }
 
-            // Año dinámico del footer
-            (function(){
-                const y = new Date().getFullYear();
-                const el = document.getElementById('footer-year');
-                if (el) el.textContent = y;
-            })();
-        </script>
-    </footer>
+            function formatTimeSince(timestamp) {
+                if (!timestamp) return 'poco tiempo';
+                const time = typeof timestamp === 'number' ? timestamp : Number(timestamp);
+                const diffMs = Date.now() - time;
+
+                if (Number.isNaN(diffMs) || diffMs < 0) {
+                    return 'instantes';
+                }
+
+                const seconds = Math.floor(diffMs / 1000);
+                if (seconds < 45) return 'instantes';
+
+                const intervals = [
+                    { label: 'año', seconds: 31536000 },
+                    { label: 'mes', seconds: 2592000 },
+                    { label: 'semana', seconds: 604800 },
+                    { label: 'día', seconds: 86400 },
+                    { label: 'hora', seconds: 3600 },
+                    { label: 'minuto', seconds: 60 }
+                ];
+
+                for (const interval of intervals) {
+                    const count = Math.floor(seconds / interval.seconds);
+                    if (count >= 1) {
+                        return `${count} ${interval.label}${count !== 1 ? 's' : ''}`;
+                    }
+                }
+
+                return 'instantes';
+            }
+
+            // --- Inicialización ---
+            checkAuthStatus().then(() => {
+                renderRoute(window.location.pathname);
+            });
+        });
+    </script>
 </body>
 </html>
-
-

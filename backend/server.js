@@ -33,6 +33,15 @@ const SESSION_DB_DIR = path.dirname(DB_PATH);
 const SESSION_DB_NAME = process.env.SESSION_DB_NAME || 'sessions.sqlite';
 const SESSION_SECRET = process.env.SESSION_SECRET || process.env.PASSWORD_SECRET || 'default-secret-change-this';
 const isProduction = process.env.NODE_ENV === 'production';
+
+// --- CHECK DE SEGURIDAD CRÍTICO ---
+if (isProduction && (SESSION_SECRET === 'default-secret-change-this' || !process.env.PASSWORD_SECRET)) {
+  console.error('\x1b[31m%s\x1b[0m', '🚨 ERROR FATAL DE SEGURIDAD:');
+  console.error('\x1b[31m%s\x1b[0m', 'En entorno de producción (NODE_ENV=production), es OBLIGATORIO configurar las variables de entorno SESSION_SECRET y PASSWORD_SECRET.');
+  console.error('\x1b[31m%s\x1b[0m', 'El servidor se detendrá para proteger tus datos.');
+  process.exit(1);
+}
+
 const sessionCookieSecure = process.env.SESSION_COOKIE_SECURE === 'true'; // Por defecto false para permitir HTTP/Cloudflare flexible
 const allowedSameSite = new Set(['lax', 'strict', 'none']);
 let cookieSameSite = (process.env.SESSION_COOKIE_SAMESITE || 'lax').toLowerCase();
@@ -63,6 +72,8 @@ db.exec(`
     username TEXT UNIQUE NOT NULL,
     passwordHash TEXT NOT NULL,
     role TEXT DEFAULT 'user',
+    isVerified INTEGER DEFAULT 0,
+    verificationToken TEXT,
     createdAt INTEGER NOT NULL
   );
 `);
@@ -137,6 +148,8 @@ ensureColumn('files', 'userId', 'userId TEXT');
 ensureColumn('users', 'role', "role TEXT DEFAULT 'user'");
 ensureColumn('users', 'resetToken', 'resetToken TEXT');
 ensureColumn('users', 'resetTokenExpires', 'resetTokenExpires INTEGER');
+ensureColumn('users', 'isVerified', 'isVerified INTEGER DEFAULT 0');
+ensureColumn('users', 'verificationToken', 'verificationToken TEXT');
 
 // --- Middlewares ---
 app.use(helmet({
@@ -219,8 +232,8 @@ const detectOrigin = (req, res, next) => {
   const localOrigin = stripTrailingSlash(process.env.LOCAL_ORIGIN) || stripTrailingSlash(defaultOrigin);
   const publicOrigin = stripTrailingSlash(process.env.PUBLIC_ORIGIN) || stripTrailingSlash(defaultOrigin);
 
-  // Expresión regular para IPs privadas (incluye loopback)
-  const isPrivateIp = /^(127\.)|(10\.)|(172\.(1[6-9]|2[0-9]|3[0-1])\.)|(192\.168\.)/.test(clientIp || '');
+  // Expresión regular para IPs privadas (incluye loopback IPv4/IPv6 y rangos privados)
+  const isPrivateIp = /^(::1|127\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.|fc00:|fe80:)/.test(clientIp || '');
   // Comprobar si el host termina en .local o .lan
   const isLocalHost = clientHost.endsWith('.local') || clientHost.endsWith('.lan');
 
@@ -342,17 +355,31 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
     // Crear usuario
     const userId = uuidv4();
     const role = 'user'; // Por defecto todos son usuarios normales
-    const stmt = db.prepare('INSERT INTO users (id, email, username, passwordHash, role, createdAt) VALUES (?, ?, ?, ?, ?, ?)');
-    stmt.run(userId, email, username, passwordHash, role, Date.now());
+    const verificationToken = crypto.randomBytes(32).toString('hex');
 
-    // Crear sesión
-    req.session.userId = userId;
-    req.session.username = username;
-    req.session.userRole = role;
+    const stmt = db.prepare('INSERT INTO users (id, email, username, passwordHash, role, isVerified, verificationToken, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+    stmt.run(userId, email, username, passwordHash, role, 0, verificationToken, Date.now());
+
+    // Enviar email de verificación
+    const verifyLink = `${req.protocol}://${req.get('host')}/verify-email?token=${verificationToken}`;
+    
+    if (!process.env.SMTP_HOST) {
+       console.log(`[DEV] Verify Link para ${email}: ${verifyLink}`);
+    } else {
+       // Enviar email asíncronamente
+       transporter.sendMail({
+        from: process.env.SMTP_FROM || '"Sendu" <noreply@sendu.local>',
+        to: email,
+        subject: 'Verifica tu email - Sendu',
+        html: `<p>Hola ${username},</p>
+               <p>Gracias por registrarte. Por favor verifica tu email haciendo clic en el siguiente enlace:</p>
+               <a href="${verifyLink}">${verifyLink}</a>`
+      }).catch(console.error);
+    }
 
     res.status(201).json({
-      message: 'Usuario registrado con éxito.',
-      user: { id: userId, email, username, role }
+      message: 'Usuario registrado. Por favor revisa tu email para verificar tu cuenta.',
+      requireVerification: true
     });
 
   } catch (err) {
@@ -383,6 +410,14 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
       return res.status(401).json({ message: 'Credenciales incorrectas.' });
     }
 
+    if (!user.isVerified) {
+      return res.status(403).json({ 
+        message: 'Email no verificado.', 
+        code: 'EMAIL_NOT_VERIFIED',
+        email: user.email 
+      });
+    }
+
     // Crear sesión
     req.session.userId = user.id;
     req.session.username = user.username;
@@ -405,7 +440,7 @@ app.post('/api/auth/logout', (req, res) => {
     if (err) {
       return res.status(500).json({ message: 'Error al cerrar sesión.' });
     }
-    res.clearCookie('connect.sid');
+    res.clearCookie(process.env.SESSION_COOKIE_NAME || 'sendu.sid');
     res.json({ message: 'Sesión cerrada.' });
   });
 });
@@ -1138,6 +1173,18 @@ app.post('/api/upload', detectOrigin, (req, res) => {
     }
 
     try {
+      // Verificar cuota de usuario (100GB) antes de procesar
+      if (req.session.userId) {
+        const USER_QUOTA = 100 * 1024 * 1024 * 1024; // 100GB
+        const currentUsage = db.prepare('SELECT SUM(size) as total FROM files WHERE userId = ?').get(req.session.userId).total || 0;
+        
+        if (currentUsage + req.file.size > USER_QUOTA) {
+          // Eliminar archivo subido
+          fs.unlinkSync(req.file.path);
+          return res.status(413).json({ message: 'Has excedido tu cuota de almacenamiento de 100GB.' });
+        }
+      }
+
       const { password, expires, maxDownloads } = req.body;
       
       // Forzar expiración máxima de 15 días (360 horas)
@@ -1324,20 +1371,22 @@ app.post('/api/upload/complete', detectOrigin, async (req, res) => {
       return res.status(400).json({ message: 'Faltan chunks.', missing });
     }
 
-    // Ensamblar archivo final de forma secuencial para evitar errores de writev
+    // Ensamblar archivo final usando Streams para optimizar memoria
     const uniqueName = `${uuidv4()}${path.extname(meta.fileName)}`;
     finalPath = path.join(STORAGE_PATH, uniqueName);
-
-    const finalHandle = await fsp.open(finalPath, 'w');
-    try {
-      for (let i = 0; i < meta.totalChunks; i++) {
-        const partPath = path.join(dir, `${i}.part`);
-        const data = await fsp.readFile(partPath);
-        await finalHandle.write(data);
-      }
-    } finally {
-      await finalHandle.close();
+    
+    const writeStream = fs.createWriteStream(finalPath);
+    
+    for (let i = 0; i < meta.totalChunks; i++) {
+      const partPath = path.join(dir, `${i}.part`);
+      await new Promise((resolve, reject) => {
+        const readStream = fs.createReadStream(partPath);
+        readStream.pipe(writeStream, { end: false });
+        readStream.on('end', resolve);
+        readStream.on('error', reject);
+      });
     }
+    writeStream.end();
 
     const fileSize = (await fsp.stat(finalPath)).size;
     const expiresAt = meta.expiresHours ? (Date.now() + (meta.expiresHours * 60 * 60 * 1000)) : null;
@@ -1391,7 +1440,7 @@ app.post('/api/upload/complete', detectOrigin, async (req, res) => {
 // GET /api/meta/:id - Obtener metadata pública de un archivo
 app.get('/api/meta/:id', (req, res) => {
   try {
-    const stmt = db.prepare('SELECT id, originalName, size, expiresAt, maxDownloads, downloadCount, passwordHash FROM files WHERE id = ?');
+    const stmt = db.prepare('SELECT id, originalName, size, mimeType, expiresAt, maxDownloads, downloadCount, passwordHash FROM files WHERE id = ?');
     const file = stmt.get(req.params.id);
 
     if (!file) {
@@ -1512,7 +1561,7 @@ app.post('/api/download/:id', (req, res) => {
   }
 });
 
-// DELETE /api/files/:id - Eliminar archivo sin autenticación (para archivos recién subidos)
+// DELETE /api/files/:id - Eliminar archivo (requiere autenticación o ser el dueño)
 app.delete('/api/files/:id', (req, res) => {
   try {
     const file = db.prepare('SELECT * FROM files WHERE id = ?').get(req.params.id);
@@ -1521,9 +1570,13 @@ app.delete('/api/files/:id', (req, res) => {
       return res.status(404).json({ message: 'Archivo no encontrado.' });
     }
     
-    // Solo permitir eliminar archivos sin userId (subidos sin cuenta) 
-    // o si el userId coincide con la sesión actual
-    if (file.userId && file.userId !== req.session?.userId) {
+    // Solo permitir eliminar si:
+    // 1. El archivo tiene userId y coincide con la sesión actual
+    // 2. El usuario es admin
+    const isOwner = file.userId && file.userId === req.session?.userId;
+    const isAdmin = req.session?.role === 'admin';
+    
+    if (!isOwner && !isAdmin) {
       return res.status(403).json({ message: 'No tienes permiso para eliminar este archivo.' });
     }
 
@@ -1617,6 +1670,61 @@ app.post('/api/admin/reports/:id/resolve', requireAdmin, (req, res) => {
   }
 });
 
+// POST /api/auth/verify-email - Verificar token de email
+app.post('/api/auth/verify-email', authLimiter, async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ message: 'Token requerido.' });
+
+    const user = db.prepare('SELECT id FROM users WHERE verificationToken = ?').get(token);
+    if (!user) {
+      return res.status(400).json({ message: 'Token inválido o ya utilizado.' });
+    }
+
+    db.prepare('UPDATE users SET isVerified = 1, verificationToken = NULL WHERE id = ?').run(user.id);
+
+    res.json({ message: 'Email verificado correctamente. Ya puedes iniciar sesión.' });
+  } catch (err) {
+    console.error('Error verificando email:', err);
+    res.status(500).json({ message: 'Error del servidor.' });
+  }
+});
+
+// POST /api/auth/resend-verification - Reenviar correo de verificación
+app.post('/api/auth/resend-verification', authLimiter, async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ message: 'Email requerido.' });
+
+        const user = db.prepare('SELECT id, username, isVerified FROM users WHERE email = ?').get(email);
+        if (!user) return res.status(404).json({ message: 'Usuario no encontrado.' });
+        if (user.isVerified) return res.status(400).json({ message: 'El usuario ya está verificado.' });
+
+        const token = crypto.randomBytes(32).toString('hex');
+        db.prepare('UPDATE users SET verificationToken = ? WHERE id = ?').run(token, user.id);
+
+        const verifyLink = `${req.protocol}://${req.get('host')}/verify-email?token=${token}`;
+        
+        if (!process.env.SMTP_HOST) {
+           console.log(`[DEV] Verify Link para ${email}: ${verifyLink}`);
+        } else {
+           transporter.sendMail({
+            from: process.env.SMTP_FROM || '"Sendu" <noreply@sendu.local>',
+            to: email,
+            subject: 'Verifica tu email - Sendu',
+            html: `<p>Hola ${user.username},</p>
+                   <p>Has solicitado reenviar el enlace de verificación.</p>
+                   <a href="${verifyLink}">${verifyLink}</a>`
+      }).catch(console.error);
+    }
+
+    res.json({ message: 'Enlace de verificación reenviado.' });
+  } catch (err) {
+    console.error('Error reenviando verificación:', err);
+    res.status(500).json({ message: 'Error del servidor.' });
+  }
+});
+
 // --- Servir Frontend ---
 
 // Servir la página de descarga
@@ -1690,8 +1798,8 @@ function cleanupExpiredFiles() {
 }
 
 // Ejecutar limpieza cada 15 minutos (900000 ms)
-const CLEANUP_INTERVAL = 15 * 60 * 1000; // 15 minutos
-setInterval(cleanupExpiredFiles, CLEANUP_INTERVAL);
+const FILE_CLEANUP_INTERVAL = 15 * 60 * 1000; // 15 minutos
+setInterval(cleanupExpiredFiles, FILE_CLEANUP_INTERVAL);
 
 // Ejecutar limpieza al iniciar el servidor
 cleanupExpiredFiles();
@@ -1704,6 +1812,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`--- Orígenes configurados ---`);
   console.log(`LOCAL: ${process.env.LOCAL_ORIGIN}`);
   console.log(`PUBLIC: ${process.env.PUBLIC_ORIGIN}`);
-  console.log(`🧹 Limpieza automática activa (cada ${CLEANUP_INTERVAL / 1000 / 60} minutos)`);
+  console.log(`🧹 Limpieza automática activa (cada ${FILE_CLEANUP_INTERVAL / 1000 / 60} minutos)`);
   console.log("Servidor listo.");
 });
