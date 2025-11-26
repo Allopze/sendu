@@ -10,7 +10,8 @@
     "cleanup": "node scripts/cleanup.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --passWithNoTests",
     "build:css": "tailwindcss -c tailwind.config.js -i ./frontend/src/styles/tailwind.css -o ./frontend/dist/tailwind.css --minify",
-    "dev:css": "tailwindcss -c tailwind.config.js -i ./frontend/src/styles/tailwind.css -o ./frontend/dist/tailwind.css --watch"
+    "dev:css": "tailwindcss -c tailwind.config.js -i ./frontend/src/styles/tailwind.css -o ./frontend/dist/tailwind.css --watch",
+    "postinstall": "npm rebuild better-sqlite3 bcrypt || true"
   },
   "keywords": [
     "file-sharing",
